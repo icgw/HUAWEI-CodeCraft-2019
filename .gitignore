@@ -37,3 +37,4 @@ bin
 build
 config/*
 .DS_Store
+*train*
