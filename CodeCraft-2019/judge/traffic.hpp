@@ -42,13 +42,14 @@ protected:
 };
 /*}}}*/
 
+class RoadOnline;
 class RunningCar : virtual public Car {
-  friend bool operator < (const RunningCar &c1, const RunningCar &c2);
-  friend bool move_to_next_road(RunningCar &car);
+  // friend bool operator < (const RunningCar &c1, const RunningCar &c2);
+  // friend bool move_to_next_road(RunningCar &car);
 
 public:
-  void init(std::vector<Road> &p);
-  void go_next_road();
+  void init(std::vector<RoadOnline*> &p);
+  bool move_to_next_road();
 
   int   get_start_time() const;
   int   get_pos()        const;
@@ -62,21 +63,22 @@ public:
 
 protected:
   State               state_;
-  std::size_t         idx_of_current_road_;
   int                 pos_;
   int                 start_time_;
-  std::vector<Road>   path_;
+
+  int                 idx_of_current_road_;
+  std::vector<RoadOnline*>   path_;
 
 private:
   RunningCar() = default;
 };
 
 class RoadInitCarList : virtual public Road {
-  friend bool compare_priority(const RunningCar &c1, const RunningCar &c2);
+  // friend bool compare_priority(const RunningCar &c1, const RunningCar &c2);
 
 public:
-  void put_car_in_init_list(const RunningCar &c, const int dir);
-  void remove_car_in_init_list(const std::list<RunningCar>::iterator &it, const int dir);
+  // void put_car_in_init_list(const RunningCar &c, const int dir);
+  // void remove_car_in_init_list(const std::list<RunningCar>::iterator &it, const int dir);
   void create_sequence();
 
 protected:
@@ -90,6 +92,8 @@ public:
   bool run_to_road(RunningCar* c, std::vector<std::vector<RunningCar*>> &running_cars);
   void run_car_in_init_list(int current_time);
   void drive_just_current_road(std::size_t channel, const int dir);
+
+  bool is_filled();
 
 protected:
   std::vector<std::vector<RunningCar*>> dir_on_running_cars_;

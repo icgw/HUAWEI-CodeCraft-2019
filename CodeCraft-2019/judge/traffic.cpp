@@ -72,20 +72,26 @@ Road::get_length()
 
 
 void
-RunningCar::init(std::vector<Road> &p)
+RunningCar::init(std::vector<RoadOnline*> &p)
 {
   this->path_.assign(p.begin(), p.end());
   this->state_ = WAIT;
   this->pos_   = 0;
+  
+  this->idx_of_current_road_ = -1;
 }
 
-void
-RunningCar::go_next_road()
+bool
+RunningCar::move_to_next_road()
 {
-  ++(this->pos_);
-  if (this->pos_ >= path_.size()) {
-    this->state_ = FINISH;
+  if (FINISH == this->state_) {
+    return true;
   }
+
+  auto next_road_idx = this->idx_of_current_road_ + 1;
+  // TODO:
+
+  return false;
 }
 
 int
@@ -142,38 +148,44 @@ RunningCar::drive(const int speed)
   return;
 }
 
-void
-RoadInitCarList::put_car_in_init_list(const RunningCar &c,
-                                      const int dir)
-{
-  if (0 == dir) {
-    this->dir_cars_.push_back(c);
-  } else {
-    this->inv_cars_.push_back(c);
-  }
-  return;
-}
+/*
+ * void
+ * RoadInitCarList::put_car_in_init_list(const RunningCar *p_car,
+ *                                       const int dir)
+ * {
+ *   if (0 == dir) {
+ *     this->dir_cars_.push_back(p_car);
+ *   } else {
+ *     this->inv_cars_.push_back(p_car);
+ *   }
+ *   return;
+ * }
+ */
 
-void
-RoadInitCarList::remove_car_in_init_list(const std::list<RunningCar>::iterator &it,
-                                         const int dir)
-{
-  if (0 == dir) {
-    this->dir_cars_.erase(it);
-  } else {
-    this->inv_cars_.erase(it);
-  }
-  return;
-}
+/*
+ * void
+ * RoadInitCarList::remove_car_in_init_list(const std::list<RunningCar>::iterator &it,
+ *                                          const int dir)
+ * {
+ *   if (0 == dir) {
+ *     this->dir_cars_.erase(it);
+ *   } else {
+ *     this->inv_cars_.erase(it);
+ *   }
+ *   return;
+ * }
+ */
 
 /*{{{ @deprecated: < RunningCar */
-bool operator < (const RunningCar &c1,
-                 const RunningCar &c2)
-{
-  return c1.priority_  < c2.priority_ ||
-        (c1.priority_ == c2.priority_ && c1.start_time_  > c2.start_time_) ||
-        (c1.priority_ == c2.priority_ && c1.start_time_ == c2.start_time_  && c1.id_ > c2.id_);
-}
+/*
+ * bool operator < (const RunningCar &c1,
+ *                  const RunningCar &c2)
+ * {
+ *   return c1.priority_  < c2.priority_ ||
+ *         (c1.priority_ == c2.priority_ && c1.start_time_  > c2.start_time_) ||
+ *         (c1.priority_ == c2.priority_ && c1.start_time_ == c2.start_time_  && c1.id_ > c2.id_);
+ * }
+ */
 /*}}}*/
 
 /*{{{ @deprecated: < list<RunningCar>::iterator */
@@ -187,12 +199,12 @@ bool operator < (const std::list<RunningCar>::iterator &it1,
 /*}}}*/
 
 bool
-compare_priority(const RunningCar &c1,
-                 const RunningCar &c2)
+compare_priority(const RunningCar *c1,
+                 const RunningCar *c2)
 {
-  return c1.get_priority()  > c2.get_priority() ||
-        (c1.get_priority() == c2.get_priority() && c1.get_start_time()  < c2.get_start_time()) ||
-        (c1.get_priority() == c2.get_priority() && c1.get_start_time() == c2.get_start_time() && c1.get_id() < c2.get_id());
+  return c1->get_priority()  > c2->get_priority() ||
+        (c1->get_priority() == c2->get_priority() && c1->get_start_time()  < c2->get_start_time()) ||
+        (c1->get_priority() == c2->get_priority() && c1->get_start_time() == c2->get_start_time() && c1->get_id() < c2->get_id());
 }
 
 void
@@ -205,15 +217,17 @@ RoadInitCarList::create_sequence()
   return;
 }
 
-bool
-move_to_next_road(RunningCar &car)
-{
-  if (car.state_ == FINISH) {
-    return true;
-  }
-  // TODO:
-  return true;
-}
+/*
+ * bool
+ * move_to_next_road(RunningCar &car)
+ * {
+ *   if (car.state_ == FINISH) {
+ *     return true;
+ *   }
+ *   // TODO:
+ *   return true;
+ * }
+ */
 
 void
 RoadOnline::drive_just_current_road(std::size_t channel,
