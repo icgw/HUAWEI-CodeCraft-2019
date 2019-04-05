@@ -110,9 +110,23 @@ RunningCar::get_state()
 }
 
 void
+RunningCar::set_pos(const int p)
+{
+  this->pos_ = p;
+  return;
+}
+
+void
 RunningCar::set_state(const State s)
 {
   this->state_ = s;
+  return;
+}
+
+void
+RunningCar::set_current_road_idx(const std::size_t idx)
+{
+  this->idx_of_current_road_ = idx;
   return;
 }
 
@@ -202,39 +216,34 @@ move_to_next_road(RunningCar &car)
 }
 
 void
-OnlineRoad::run_car_in_init_list(int current_time)
-{
-  return;
-}
-
-void
-OnlineRoad::drive_just_current_road(std::size_t channel,
-                                    std::vector<std::vector<RunningCar>> &cars)
+RoadOnline::drive_just_current_road(std::size_t channel,
+                                    std::vector<std::vector<RunningCar*>> &cars)
 {
   if (channel >= cars.size()) {
     return;
   }
 
+  // XXX: prev_pos
   int v = 0, prev_pos = 0x3f3f3f3f;
   State prev_state = WAIT;
-  for (auto &c : cars[channel]) {
-    v = std::min(c.get_speed(), this->get_speed());
-    if (v > prev_pos - c.get_pos()) {
-      v = prev_pos - c.get_pos();
-      c.set_state(prev_state);
+  for (auto c : cars[channel]) {
+    v = std::min(c->get_speed(), this->get_speed());
+    if (v > prev_pos - c->get_pos()) {
+      v = prev_pos - c->get_pos();
+      c->set_state(prev_state);
     } else {
-      c.set_state(FINAL);
+      c->set_state(FINAL);
     }
-    c.drive(v);
-    prev_pos   = c.get_pos();
-    prev_state = c.get_state();
+    c->drive(v);
+    prev_pos   = c->get_pos();
+    prev_state = c->get_state();
   }
 
   return;
 }
 
 void
-OnlineRoad::drive_just_current_road(std::size_t channel,
+RoadOnline::drive_just_current_road(std::size_t channel,
                                     const int start_cross)
 {
   if (start_cross == this->from_) {
@@ -245,5 +254,105 @@ OnlineRoad::drive_just_current_road(std::size_t channel,
     drive_just_current_road(channel, this->inv_on_running_cars_);
   }
   
+  return;
+}
+
+// @deprecated
+/*
+ * bool
+ * RoadOnline::run_to_road(RunningCar* c)
+ * {
+ *   if (nullptr == c) return false;
+ * 
+ *   int v = std::min(c->get_speed(), this->get_speed());
+ *   for (auto &channel : dir_on_running_cars_) {
+ *     if (channel.back()->get_pos() <= 1){
+ *       continue;
+ *     }
+ * 
+ *     if (channel.back()->get_pos() <= v && channel.back()->get_state() == WAIT) {
+ *       continue;
+ *     }
+ * 
+ *     v = std::min(v, channel.back()->get_pos() - 1);
+ * 
+ *     c->set_pos(v);
+ *     c->set_state(channel.back()->get_state());
+ *     c->set_current_road_idx(0);
+ *     channel.push_back(c);
+ *     return true;
+ *   }
+ * 
+ *   return false;
+ * }
+ */
+
+bool
+RoadOnline::run_to_road(RunningCar* c,
+                       std::vector<std::vector<RunningCar*>> &running_cars)
+{
+  if (nullptr == c) return false;
+
+  int v = std::min(c->get_speed(), this->get_speed());
+  for (auto &channel : running_cars) {
+    if (channel.back()->get_pos() <= 1) {
+      continue;
+    }
+
+    if (channel.back()->get_pos() <= v && channel.back()->get_state() == WAIT) {
+      continue;
+    }
+
+    v = std::min(v, channel.back()->get_pos() - 1);
+
+    c->set_pos(v);
+    c->set_state(channel.back()->get_state());
+    c->set_current_road_idx(0);
+    channel.push_back(c);
+    return true;
+  }
+
+  return false;
+}
+
+void
+RoadOnline::run_car_in_init_list(const int current_time,
+                                 std::list<RunningCar*> &init_list,
+                                 std::vector<std::vector<RunningCar*>> &running_cars)
+{
+  for (auto it = init_list.begin(); it != init_list.end(); ) {
+    if (current_time < (*it)->get_start_time()) {
+      ++it;
+      continue;
+    }
+
+    if (run_to_road(*it, running_cars)) {
+      it = init_list.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  return;
+}
+
+void
+RoadOnline::run_car_in_init_list(int current_time)
+{
+  run_car_in_init_list(current_time, this->dir_cars_, this->dir_on_running_cars_);
+  if (1 == this->is_duplex_) {
+    run_car_in_init_list(current_time, this->inv_cars_, this->inv_on_running_cars_);
+  }
+  return;
+}
+
+void
+Cross::init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline)
+{
+  for (auto id : this->roads_id_) {
+    if (id == -1) {
+      continue;
+    }
+    this->roads_online_.push_back(road_id_to_roadonline[id]);
+  }
   return;
 }

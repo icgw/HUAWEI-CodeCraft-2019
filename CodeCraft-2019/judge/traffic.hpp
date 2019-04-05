@@ -10,7 +10,7 @@
 
 #include <vector>
 #include <list>
-#include <queue>
+#include <unordered_map>
 #include "common.hpp"
 
 /*{{{ class Car: id, from, to, speed, plan_time, priority, preset */
@@ -27,19 +27,6 @@ protected:
 
 private:
   Car() = default;
-};
-/*}}}*/
-
-/*{{{ class Cross: id, road_id, road_id, road_id, road_id */
-class Cross : virtual public Identity {
-public:
-  Cross(int i) : Identity(i), roads_({ -1, -1, -1, -1}) {}
-
-protected:
-  std::vector<int> roads_;
-
-private:
-  Cross() = default;
 };
 /*}}}*/
 
@@ -63,20 +50,22 @@ public:
   void init(std::vector<Road> &p);
   void go_next_road();
 
-  int get_start_time() const;
-  int get_pos() const;
-  State get_state() const;
+  int   get_start_time() const;
+  int   get_pos()        const;
+  State get_state()      const;
 
   void drive(const int speed);
 
+  void set_pos(const int p);
   void set_state(const State s);
+  void set_current_road_idx(const std::size_t idx);
 
 protected:
   State               state_;
-  int                 start_time_;
-  std::vector<Road>   path_;
   std::size_t         idx_of_current_road_;
   int                 pos_;
+  int                 start_time_;
+  std::vector<Road>   path_;
 
 private:
   RunningCar() = default;
@@ -91,21 +80,42 @@ public:
   void create_sequence();
 
 protected:
-  std::list<RunningCar> dir_cars_;
-  std::list<RunningCar> inv_cars_;
+  std::list<RunningCar*> dir_cars_;
+  std::list<RunningCar*> inv_cars_;
 };
 
-class OnlineRoad : virtual public RoadInitCarList {
+class RoadOnline : virtual public RoadInitCarList {
 public:
+  // bool run_to_road(RunningCar* c);
+  bool run_to_road(RunningCar* c, std::vector<std::vector<RunningCar*>> &running_cars);
   void run_car_in_init_list(int current_time);
   void drive_just_current_road(std::size_t channel, const int dir);
 
 protected:
-  std::vector<std::vector<RunningCar>> dir_on_running_cars_;
-  std::vector<std::vector<RunningCar>> inv_on_running_cars_;
+  std::vector<std::vector<RunningCar*>> dir_on_running_cars_;
+  std::vector<std::vector<RunningCar*>> inv_on_running_cars_;
 
 private:
-  void drive_just_current_road(std::size_t channel, std::vector<std::vector<RunningCar>> &cars);
+  void run_car_in_init_list(const int current_time, std::list<RunningCar*> &init_list, std::vector<std::vector<RunningCar*>> &running_cars);
+  void drive_just_current_road(std::size_t channel, std::vector<std::vector<RunningCar*>> &cars);
 };
+
+/*{{{ class Cross: id, road_id, road_id, road_id, road_id */
+class Cross : virtual public Identity {
+public:
+  Cross(const int i, const int r1, const int r2, const int r3, const int r4)
+    : Identity(i)
+    , roads_id_({ r1, r2, r3, r4 }) {}
+
+  void init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline);
+
+protected:
+  std::vector<int> roads_id_;
+  std::vector<RoadOnline*> roads_online_;
+
+private:
+  Cross() = default;
+};
+/*}}}*/
 
 #endif // ifndef _TRAFFIC_HPP_
