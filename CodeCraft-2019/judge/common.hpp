@@ -13,7 +13,9 @@ enum State { WAIT, FINAL, FINISH };
 class Identity {
 public:
   Identity(int i) : id_(i) {}
+
   virtual ~Identity();
+
   int get_id() const;
 
 protected:
@@ -23,15 +25,25 @@ private:
   Identity() = default;
 };
 
-class StartEnd : virtual public Identity {
+class StartEnd : public Identity {
 public:
-  StartEnd() = default;
+  StartEnd(int i, int speed, int from, int to)
+    : Identity(i)
+    , speed_(speed)
+    , from_(from)
+    , to_(to) {}
+
   virtual ~StartEnd();
+
   int get_speed() const;
-  int get_from() const;
-  int get_to() const;
+  int get_from()  const;
+  int get_to()    const;
+
 protected:
   int speed_, from_, to_;
+
+private:
+  StartEnd() = default;
 };
 
 #endif // ifndef _COMMON_HPP_

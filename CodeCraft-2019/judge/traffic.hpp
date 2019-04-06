@@ -14,16 +14,22 @@
 #include "common.hpp"
 
 /*{{{ class Car: id, from, to, speed, plan_time, priority, preset */
-class Car   : virtual public StartEnd {
+class Car : virtual public StartEnd {
 public:
+  Car(int i, int from, int to, int speed, int plan_time, int priority, int preset)
+    : StartEnd(i, speed, from, to)
+    , plan_time_(plan_time)
+    , priority_(priority)
+    , preset_(preset) {}
+
   int get_plan_time() const;
   int get_priority()  const;
   int get_preset()    const;
 
 protected:
-  int  plan_time_;
+  int plan_time_;
   int  priority_;
-  bool preset_;
+  int    preset_;
 
 private:
   Car() = default;
@@ -31,54 +37,58 @@ private:
 /*}}}*/
 
 /*{{{ class Road: id, length, speed, channel, from, to, is_duplex */
-class Road  : virtual public StartEnd {
+class Road : virtual public StartEnd {
 public:
+  Road(int i, int len, int speed, int channel, int from, int to, int is_duplex)
+    : StartEnd(i, speed, from, to)
+    , length_(len)
+    , channel_(channel)
+    , is_duplex_(is_duplex) {}
+
   int get_length() const;
 
 protected:
-  int length_;
-  int channel_;
+  int     length_;
+  int    channel_;
   bool is_duplex_;
 };
 /*}}}*/
 
 class RoadOnline;
+class Cross;
 class RunningCar : virtual public Car {
-  // friend bool operator < (const RunningCar &c1, const RunningCar &c2);
-  // friend bool move_to_next_road(RunningCar &car);
-
 public:
-  void init(std::vector<RoadOnline*> &p);
-  bool move_to_next_road();
+  int   get_start_time()       const;
+  int   get_current_road_pos() const;
+  State get_state()            const;
 
-  int   get_start_time() const;
-  int   get_pos()        const;
-  State get_state()      const;
-
-  void drive(const int speed);
-
-  void set_pos(const int p);
+  void set_current_road_pos(const int p);
   void set_state(const State s);
   void set_current_road_idx(const std::size_t idx);
 
+  void init(std::vector<RoadOnline*> &p);
+  bool move_to_next_road();
+
+  void drive(const int speed);
+
 protected:
   State               state_;
-  int                 pos_;
+  int                 current_road_pos_;
   int                 start_time_;
 
+  int                 next_road_pos_;
+
   int                 idx_of_current_road_;
+
   std::vector<RoadOnline*>   path_;
+  std::vector<Cross*>        start_cross_id_sequence_;
 
 private:
   RunningCar() = default;
 };
 
 class RoadInitCarList : virtual public Road {
-  // friend bool compare_priority(const RunningCar &c1, const RunningCar &c2);
-
 public:
-  // void put_car_in_init_list(const RunningCar &c, const int dir);
-  // void remove_car_in_init_list(const std::list<RunningCar>::iterator &it, const int dir);
   void create_sequence();
 
 protected:
@@ -88,12 +98,11 @@ protected:
 
 class RoadOnline : virtual public RoadInitCarList {
 public:
-  // bool run_to_road(RunningCar* c);
   bool run_to_road(RunningCar* c, std::vector<std::vector<RunningCar*>> &running_cars);
   void run_car_in_init_list(int current_time);
   void drive_just_current_road(std::size_t channel, const int dir);
 
-  bool is_filled();
+  bool is_filled(const int start_cross_id);
 
 protected:
   std::vector<std::vector<RunningCar*>> dir_on_running_cars_;

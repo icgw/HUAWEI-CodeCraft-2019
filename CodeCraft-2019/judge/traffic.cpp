@@ -9,7 +9,7 @@
 #include "traffic.hpp"
 
 /*{{{ Identity::get_id() */
-int
+inline int
 Identity::get_id()
   const
 {
@@ -18,21 +18,21 @@ Identity::get_id()
 /*}}}*/
 
 /*{{{ StartEnd::get_speed(), get_from(), get_to() */
-int
+inline int
 StartEnd::get_speed()
   const
 {
   return this->speed_;
 }
 
-int
+inline int
 StartEnd::get_from()
   const
 {
   return this->from_;
 }
 
-int
+inline int
 StartEnd::get_to()
   const
 {
@@ -41,21 +41,21 @@ StartEnd::get_to()
 /*}}}*/
 
 /*{{{ Car::get_plan_time(), get_priority(), get_preset() */
-int
+inline int
 Car::get_plan_time()
   const
 {
   return this->plan_time_;
 }
 
-int
+inline int
 Car::get_priority()
   const
 {
   return this->priority_;
 }
 
-int
+inline int
 Car::get_preset()
   const
 {
@@ -63,21 +63,66 @@ Car::get_preset()
 }
 /*}}}*/
 
-int
+/*{{{ Road::get_length() */
+inline int
 Road::get_length()
   const
 {
   return this->length_;
 }
+/*}}}*/
 
+/*{{{ RunningCar::get_start_time(), get_current_road_pos(), get_state(), set_current_road_pos(), set_state(), set_current_road_idx() */
+inline int
+RunningCar::get_start_time()
+  const
+{
+  return this->start_time_;
+}
+
+inline int
+RunningCar::get_current_road_pos()
+  const
+{
+  return this->current_road_pos_;
+}
+
+inline State
+RunningCar::get_state()
+  const
+{
+  return this->state_;
+}
+
+inline void
+RunningCar::set_current_road_pos(const int p)
+{
+  this->current_road_pos_ = p;
+  return;
+}
+
+inline void
+RunningCar::set_state(const State s)
+{
+  this->state_ = s;
+  return;
+}
+
+inline void
+RunningCar::set_current_road_idx(const std::size_t idx)
+{
+  this->idx_of_current_road_ = idx;
+  return;
+}
+/*}}}*/
 
 void
 RunningCar::init(std::vector<RoadOnline*> &p)
 {
   this->path_.assign(p.begin(), p.end());
-  this->state_ = WAIT;
-  this->pos_   = 0;
-  
+  this->state_               = WAIT;
+  this->current_road_pos_    = 0;
+
   this->idx_of_current_road_ = -1;
 }
 
@@ -94,109 +139,32 @@ RunningCar::move_to_next_road()
   return false;
 }
 
-int
-RunningCar::get_start_time()
-  const
-{
-  return this->start_time_;
-}
-
-int
-RunningCar::get_pos()
-  const
-{
-  return this->pos_;
-}
-
-State
-RunningCar::get_state()
-  const
-{
-  return this->state_;
-}
-
-void
-RunningCar::set_pos(const int p)
-{
-  this->pos_ = p;
-  return;
-}
-
-void
-RunningCar::set_state(const State s)
-{
-  this->state_ = s;
-  return;
-}
-
-void
-RunningCar::set_current_road_idx(const std::size_t idx)
-{
-  this->idx_of_current_road_ = idx;
-  return;
-}
-
 void
 RunningCar::drive(const int speed)
 {
-  this->pos_ += speed;
-  if (this->pos_ >= this->path_[this->idx_of_current_road_].get_length()) {
-    this->state_ = WAIT;
-  } else {
-    this->state_ = FINAL;
+  int current_road_len = this->path_[this->idx_of_current_road_]->get_length();
+  if (this->current_road_pos_ + speed <= current_road_len) {
+    this->current_road_pos_ += speed;
+    this->state_             = FINAL;
+    return;
   }
+
+  if (this->path_.size() - 1 <= this->idx_of_current_road_) {
+    this->current_road_pos_ += speed;
+    this->state_             = FINISH;
+    return;
+  }
+
+  int s1 = current_road_len - this->current_road_pos_;
+  RoadOnline *next_road = this->path_[this->idx_of_current_road_ + 1];
+  int v2 = std::min(this->speed_, next_road->get_speed());
+
+  this->current_road_pos_ = current_road_len;
+  this->next_road_pos_ = std::max(0, v2 - s1);
+  this->state_ = WAIT;
+
   return;
 }
-
-/*
- * void
- * RoadInitCarList::put_car_in_init_list(const RunningCar *p_car,
- *                                       const int dir)
- * {
- *   if (0 == dir) {
- *     this->dir_cars_.push_back(p_car);
- *   } else {
- *     this->inv_cars_.push_back(p_car);
- *   }
- *   return;
- * }
- */
-
-/*
- * void
- * RoadInitCarList::remove_car_in_init_list(const std::list<RunningCar>::iterator &it,
- *                                          const int dir)
- * {
- *   if (0 == dir) {
- *     this->dir_cars_.erase(it);
- *   } else {
- *     this->inv_cars_.erase(it);
- *   }
- *   return;
- * }
- */
-
-/*{{{ @deprecated: < RunningCar */
-/*
- * bool operator < (const RunningCar &c1,
- *                  const RunningCar &c2)
- * {
- *   return c1.priority_  < c2.priority_ ||
- *         (c1.priority_ == c2.priority_ && c1.start_time_  > c2.start_time_) ||
- *         (c1.priority_ == c2.priority_ && c1.start_time_ == c2.start_time_  && c1.id_ > c2.id_);
- * }
- */
-/*}}}*/
-
-/*{{{ @deprecated: < list<RunningCar>::iterator */
-bool operator < (const std::list<RunningCar>::iterator &it1,
-                 const std::list<RunningCar>::iterator &it2)
-{
-  return it1->get_priority() < it2->get_priority() ||
-        (it1->get_priority() == it2->get_priority() && it1->get_start_time() > it2->get_start_time()) ||
-        (it1->get_priority() == it2->get_priority() && it1->get_start_time() == it2->get_start_time() && it1->get_id() > it2->get_id());
-}
-/*}}}*/
 
 bool
 compare_priority(const RunningCar *c1,
@@ -217,18 +185,6 @@ RoadInitCarList::create_sequence()
   return;
 }
 
-/*
- * bool
- * move_to_next_road(RunningCar &car)
- * {
- *   if (car.state_ == FINISH) {
- *     return true;
- *   }
- *   // TODO:
- *   return true;
- * }
- */
-
 void
 RoadOnline::drive_just_current_road(std::size_t channel,
                                     std::vector<std::vector<RunningCar*>> &cars)
@@ -242,14 +198,14 @@ RoadOnline::drive_just_current_road(std::size_t channel,
   State prev_state = WAIT;
   for (auto c : cars[channel]) {
     v = std::min(c->get_speed(), this->get_speed());
-    if (v > prev_pos - c->get_pos()) {
-      v = prev_pos - c->get_pos();
+    if (v > prev_pos - c->get_current_road_pos()) {
+      v = prev_pos - c->get_current_road_pos();
       c->set_state(prev_state);
     } else {
       c->set_state(FINAL);
     }
     c->drive(v);
-    prev_pos   = c->get_pos();
+    prev_pos   = c->get_current_road_pos();
     prev_state = c->get_state();
   }
 
@@ -271,36 +227,6 @@ RoadOnline::drive_just_current_road(std::size_t channel,
   return;
 }
 
-// @deprecated
-/*
- * bool
- * RoadOnline::run_to_road(RunningCar* c)
- * {
- *   if (nullptr == c) return false;
- * 
- *   int v = std::min(c->get_speed(), this->get_speed());
- *   for (auto &channel : dir_on_running_cars_) {
- *     if (channel.back()->get_pos() <= 1){
- *       continue;
- *     }
- * 
- *     if (channel.back()->get_pos() <= v && channel.back()->get_state() == WAIT) {
- *       continue;
- *     }
- * 
- *     v = std::min(v, channel.back()->get_pos() - 1);
- * 
- *     c->set_pos(v);
- *     c->set_state(channel.back()->get_state());
- *     c->set_current_road_idx(0);
- *     channel.push_back(c);
- *     return true;
- *   }
- * 
- *   return false;
- * }
- */
-
 bool
 RoadOnline::run_to_road(RunningCar* c,
                        std::vector<std::vector<RunningCar*>> &running_cars)
@@ -309,17 +235,17 @@ RoadOnline::run_to_road(RunningCar* c,
 
   int v = std::min(c->get_speed(), this->get_speed());
   for (auto &channel : running_cars) {
-    if (channel.back()->get_pos() <= 1) {
+    if (channel.back()->get_current_road_pos() <= 1) {
       continue;
     }
 
-    if (channel.back()->get_pos() <= v && channel.back()->get_state() == WAIT) {
+    if (channel.back()->get_current_road_pos() <= v && channel.back()->get_state() == WAIT) {
       continue;
     }
 
-    v = std::min(v, channel.back()->get_pos() - 1);
+    v = std::min(v, channel.back()->get_current_road_pos() - 1);
 
-    c->set_pos(v);
+    c->set_current_road_pos(v);
     c->set_state(channel.back()->get_state());
     c->set_current_road_idx(0);
     channel.push_back(c);
@@ -357,6 +283,29 @@ RoadOnline::run_car_in_init_list(int current_time)
     run_car_in_init_list(current_time, this->inv_cars_, this->inv_on_running_cars_);
   }
   return;
+}
+
+bool
+RoadOnline::is_filled(const int start_cross_id)
+{
+  // XXX:
+  if (start_cross_id == this->from_) {
+    for (auto &channel : this->dir_on_running_cars_) {
+      if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
+        return false;
+      }
+    }
+  }
+
+  if (start_cross_id == this->to_) {
+    for (auto &channel : this->inv_on_running_cars_) {
+      if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 void
