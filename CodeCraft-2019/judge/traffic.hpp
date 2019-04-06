@@ -11,6 +11,7 @@
 #include <vector>
 #include <list>
 #include <utility> // std::pair
+#include <queue>   // std::priority_queue
 #include <unordered_map>
 #include "common.hpp"
 
@@ -126,23 +127,24 @@ public:
   bool run_to_road(RunningCar* c, std::vector<std::vector<RunningCar*>> &running_cars);
   void run_car_in_init_list(int current_time);
   void drive_just_current_road(const int channel, const int start_cross_id);
-
-  // @deprecated
-  // void drive_just_current_road(std::size_t channel, const int dir);
+  void drive_just_current_road();
 
   bool is_final_filled(const int start_cross_id);
   std::pair<int, int> select_valid_channel(const int start_cross_id);
 
-  // @deprecated
-  // bool is_filled(const int start_cross_id);
-
 protected:
   std::vector<std::vector<RunningCar*>> dir_on_running_cars_;
+  std::vector<std::list<RunningCar*>> dir_on_running_cars_ls;
+  // TODO:
+  std::priority_queue<RunningCar*> dir_on_waiting_cars_pq;
+
   std::vector<std::vector<RunningCar*>> inv_on_running_cars_;
+  std::vector<std::list<RunningCar*>> inv_on_running_cars_ls;
+  // TODO:
+  std::priority_queue<RunningCar*> inv_on_waiting_cars_pq;
 
 private:
   void run_car_in_init_list(const int current_time, std::list<RunningCar*> &init_list, std::vector<std::vector<RunningCar*>> &running_cars);
-  // @deprecated
   void drive_just_current_road(const int channel, std::vector<std::vector<RunningCar*>> &cars);
 };
 

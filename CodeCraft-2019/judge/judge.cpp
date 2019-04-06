@@ -7,39 +7,22 @@
 
 #include "judge.hpp"
 
-namespace judge {
-  void
-  drive_just_current_road()
-  {
-    // TODO: Step1: put the car in road (driving the car).
-    return;
+void
+Judge::drive_just_current_road()
+{
+  for (auto &rd : this->roads_) {
+    rd.drive_just_current_road();
   }
+  return;
+}
 
-  void
-  drive_car_init_list(bool b)
-  {
-    // TODO: if b == true, drive priority car, otherwise drive all car.
-    return;
+bool
+Judge::is_finish()
+{
+  for (auto &c : this->cars_) {
+    if (FINISH != c.get_state()) {
+      return false;
+    }
   }
-
-  void
-  create_car_sequence()
-  {
-    // TODO: create the priority for cars.
-    return;
-  }
-
-  bool
-  drive_car_in_wait_state()
-  {
-    // TODO: drive all waiting car to process. if deadlock found then return false.
-    return true;
-  }
-
-  bool
-  is_finish()
-  {
-    // TODO: whether all car arrived.
-    return false;
-  }
+  return true;
 }

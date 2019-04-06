@@ -252,6 +252,21 @@ RoadOnline::drive_just_current_road(const int channel,
 }
 
 void
+RoadOnline::drive_just_current_road()
+{
+  for (auto i = 0; i < this->channel_; ++i) {
+    drive_just_current_road(i, this->from_);
+  }
+
+  if (1 == this->is_duplex_) {
+    for (auto i = 0; i < this->channel_; ++i) {
+      drive_just_current_road(i, this->to_);
+    }
+  }
+  return;
+}
+
+void
 RoadOnline::drive_just_current_road(const int channel,
                                     std::vector<std::vector<RunningCar*>> &cars)
 {
@@ -278,23 +293,6 @@ RoadOnline::drive_just_current_road(const int channel,
 
   return;
 }
-
-/*
- * void
- * RoadOnline::drive_just_current_road(std::size_t channel,
- *                                     const int start_cross)
- * {
- *   if (start_cross == this->from_) {
- *     drive_just_current_road(channel, this->dir_on_running_cars_);
- *   }
- * 
- *   if (1 == this->is_duplex_ && start_cross == this->to_) {
- *     drive_just_current_road(channel, this->inv_on_running_cars_);
- *   }
- * 
- *   return;
- * }
- */
 
 bool
 RoadOnline::run_to_road(RunningCar* c,
@@ -414,28 +412,3 @@ RoadOnline::select_valid_channel(const int start_cross_id)
 
   return { -1, 0 };
 }
-
-/*
- * bool
- * RoadOnline::is_filled(const int start_cross_id)
- * {
- *   if (start_cross_id == this->from_) {
- *     for (auto &channel : this->dir_on_running_cars_) {
- *       if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
- *         return false;
- *       }
- *     }
- *   }
- * 
- *   if (start_cross_id == this->to_) {
- *     for (auto &channel : this->inv_on_running_cars_) {
- *       if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
- *         return false;
- *       }
- *     }
- *   }
- * 
- *   return true;
- * }
- */
-
