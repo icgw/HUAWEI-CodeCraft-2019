@@ -72,6 +72,18 @@ Road::get_length()
 }
 /*}}}*/
 
+void
+Cross::init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline)
+{
+  for (auto id : this->roads_id_) {
+    if (id == -1) {
+      continue;
+    }
+    this->roads_online_.push_back(road_id_to_roadonline[id]);
+  }
+  return;
+}
+
 /*{{{ RunningCar::get_start_time(), get_current_road_pos(), get_state(), set_current_road_pos(), set_state(), set_current_road_idx() */
 inline int
 RunningCar::get_start_time()
@@ -87,6 +99,13 @@ RunningCar::get_current_road_pos()
   return this->current_road_pos_;
 }
 
+inline int
+RunningCar::get_current_road_channel()
+  const
+{
+  return this->current_road_channel_;
+}
+
 inline State
 RunningCar::get_state()
   const
@@ -98,6 +117,13 @@ inline void
 RunningCar::set_current_road_pos(const int p)
 {
   this->current_road_pos_ = p;
+  return;
+}
+
+inline void
+RunningCar::set_current_road_channel(const int channel)
+{
+  this->current_road_channel_ = channel;
   return;
 }
 
@@ -120,21 +146,48 @@ void
 RunningCar::init(std::vector<RoadOnline*> &p)
 {
   this->path_.assign(p.begin(), p.end());
-  this->state_               = WAIT;
-  this->current_road_pos_    = 0;
+  this->state_                = WAIT;
+  this->current_road_pos_     = 0;
+  this->current_road_channel_ = -1;
+  this->next_road_pos_        = 0;
 
-  this->idx_of_current_road_ = -1;
+  this->idx_of_current_road_  = -1;
 }
 
 bool
-RunningCar::move_to_next_road()
+RunningCar::move_to_next_road() // for waiting car.
 {
   if (FINISH == this->state_) {
     return true;
   }
 
-  auto next_road_idx = this->idx_of_current_road_ + 1;
-  // TODO:
+  auto next_road_idx         = this->idx_of_current_road_ + 1;
+  if (next_road_idx >= this->path_.size()) {
+    return true;
+  }
+
+  auto next_road_start_cross = this->start_cross_id_sequence_[next_road_idx]->get_id();
+  auto next_road = this->path_[next_road_idx];
+
+  if (next_road->is_final_filled(next_road_start_cross)) {
+    this->current_road_pos_ = this->path_[this->idx_of_current_road_]->get_length();
+    this->state_ = FINAL;
+    return true;
+  }
+
+  auto next_road_channel_and_pos = next_road->select_valid_channel(next_road_start_cross);
+  auto next_channel = next_road_channel_and_pos.first;
+  auto next_pos     = next_road_channel_and_pos.second;
+
+  if (next_channel != -1) {
+    ++this->idx_of_current_road_;
+
+    this->current_road_channel_ = next_channel;
+    this->current_road_pos_     = std::min(this->next_road_pos_, next_pos);
+    this->next_road_pos_        = 0;
+    this->state_                = FINAL;
+    return true;
+  }
 
   return false;
 }
@@ -161,14 +214,14 @@ RunningCar::drive(const int speed)
 
   this->current_road_pos_ = current_road_len;
   this->next_road_pos_ = std::max(0, v2 - s1);
-  this->state_ = WAIT;
+  this->state_ = ((this->next_road_pos_ == 0) ? FINAL : WAIT);
 
   return;
 }
 
 bool
-compare_priority(const RunningCar *c1,
-                 const RunningCar *c2)
+compare_priority(RunningCar* const &c1,
+                 RunningCar* const &c2)
 {
   return c1->get_priority()  > c2->get_priority() ||
         (c1->get_priority() == c2->get_priority() && c1->get_start_time()  < c2->get_start_time()) ||
@@ -176,7 +229,7 @@ compare_priority(const RunningCar *c1,
 }
 
 void
-RoadInitCarList::create_sequence()
+RoadInitCarList::create_car_sequence()
 {
   dir_cars_.sort(compare_priority);
   if (1 == this->is_duplex_) {
@@ -186,25 +239,39 @@ RoadInitCarList::create_sequence()
 }
 
 void
-RoadOnline::drive_just_current_road(std::size_t channel,
+RoadOnline::drive_just_current_road(const int channel,
+                                    const int start_cross_id)
+{
+  if (start_cross_id == this->from_) {
+    this->drive_just_current_road(channel, this->dir_on_running_cars_);
+  }
+  else if (start_cross_id == this->to_) {
+    this->drive_just_current_road(channel, this->inv_on_running_cars_);
+  }
+  return;
+}
+
+void
+RoadOnline::drive_just_current_road(const int channel,
                                     std::vector<std::vector<RunningCar*>> &cars)
 {
-  if (channel >= cars.size()) {
+  if (channel < 0 || channel >= cars.size()) {
     return;
   }
 
-  // XXX: prev_pos
-  int v = 0, prev_pos = 0x3f3f3f3f;
+  int v = 0, prev_pos = this->length_ + 1;
   State prev_state = WAIT;
   for (auto c : cars[channel]) {
     v = std::min(c->get_speed(), this->get_speed());
-    if (v > prev_pos - c->get_current_road_pos()) {
-      v = prev_pos - c->get_current_road_pos();
+    if (v >= prev_pos - c->get_current_road_pos()) {
+      if (prev_state == FINAL) {
+        c->drive(prev_pos - c->get_current_road_pos() - 1);
+      }
       c->set_state(prev_state);
     } else {
+      c->drive(v);
       c->set_state(FINAL);
     }
-    c->drive(v);
     prev_pos   = c->get_current_road_pos();
     prev_state = c->get_state();
   }
@@ -212,43 +279,49 @@ RoadOnline::drive_just_current_road(std::size_t channel,
   return;
 }
 
-void
-RoadOnline::drive_just_current_road(std::size_t channel,
-                                    const int start_cross)
-{
-  if (start_cross == this->from_) {
-    drive_just_current_road(channel, this->dir_on_running_cars_);
-  }
-
-  if (1 == this->is_duplex_ && start_cross == this->to_) {
-    drive_just_current_road(channel, this->inv_on_running_cars_);
-  }
-  
-  return;
-}
+/*
+ * void
+ * RoadOnline::drive_just_current_road(std::size_t channel,
+ *                                     const int start_cross)
+ * {
+ *   if (start_cross == this->from_) {
+ *     drive_just_current_road(channel, this->dir_on_running_cars_);
+ *   }
+ * 
+ *   if (1 == this->is_duplex_ && start_cross == this->to_) {
+ *     drive_just_current_road(channel, this->inv_on_running_cars_);
+ *   }
+ * 
+ *   return;
+ * }
+ */
 
 bool
 RoadOnline::run_to_road(RunningCar* c,
-                       std::vector<std::vector<RunningCar*>> &running_cars)
+                        std::vector<std::vector<RunningCar*>> &running_cars)
 {
   if (nullptr == c) return false;
 
   int v = std::min(c->get_speed(), this->get_speed());
-  for (auto &channel : running_cars) {
-    if (channel.back()->get_current_road_pos() <= 1) {
+
+  int sz = running_cars.size();
+  for (auto i = 0; i < sz; ++i) {
+    if (running_cars[i].back()->get_current_road_pos() <= 1) {
       continue;
     }
 
-    if (channel.back()->get_current_road_pos() <= v && channel.back()->get_state() == WAIT) {
+    if (running_cars[i].back()->get_current_road_pos() <= v && running_cars[i].back()->get_state() == WAIT) {
       continue;
     }
 
-    v = std::min(v, channel.back()->get_current_road_pos() - 1);
+    v = std::min(v, running_cars[i].back()->get_current_road_pos() - 1);
 
     c->set_current_road_pos(v);
-    c->set_state(channel.back()->get_state());
+    c->set_state(running_cars[i].back()->get_state());
     c->set_current_road_idx(0);
-    channel.push_back(c);
+    c->set_current_road_channel(i);
+    running_cars[i].push_back(c);
+
     return true;
   }
 
@@ -286,36 +359,83 @@ RoadOnline::run_car_in_init_list(int current_time)
 }
 
 bool
-RoadOnline::is_filled(const int start_cross_id)
+RoadOnline::is_final_filled(const int start_cross_id)
 {
-  // XXX:
   if (start_cross_id == this->from_) {
     for (auto &channel : this->dir_on_running_cars_) {
-      if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
+      if (channel.size() <= 0) {
+        return false;
+      }
+      if (channel.back()->get_state() != FINAL || channel.back()->get_current_road_pos() > 1) {
         return false;
       }
     }
   }
-
-  if (start_cross_id == this->to_) {
+  else if (1 == this->is_duplex_ && start_cross_id == this->to_) {
     for (auto &channel : this->inv_on_running_cars_) {
-      if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
+      if (channel.size() <= 0) {
+        return false;
+      }
+      if (channel.back()->get_state() != FINAL || channel.back()->get_current_road_pos() > 1) {
         return false;
       }
     }
   }
-
   return true;
 }
 
-void
-Cross::init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline)
+std::pair<int, int>
+RoadOnline::select_valid_channel(const int start_cross_id)
 {
-  for (auto id : this->roads_id_) {
-    if (id == -1) {
-      continue;
+  if (start_cross_id == this->from_) {
+    auto sz = this->dir_on_running_cars_.size();
+    for (auto i = 0; i < sz; ++i) {
+      if (this->dir_on_running_cars_[i].size() == 0) {
+        return { i, this->length_ };
+      }
+      else if (this->dir_on_running_cars_[i].back()->get_current_road_pos() > 1 &&
+               this->dir_on_running_cars_[i].back()->get_state() == FINAL) {
+        return { i, this->dir_on_running_cars_[i].back()->get_current_road_pos() - 1 };
+      }
     }
-    this->roads_online_.push_back(road_id_to_roadonline[id]);
   }
-  return;
+  else if (1 == this->is_duplex_ && start_cross_id == this->to_) {
+    auto sz = this->inv_on_running_cars_.size();
+    for (auto i = 0; i < sz; ++i) {
+      if (this->inv_on_running_cars_[i].size() == 0) {
+        return { i, this->length_ };
+      }
+      else if (this->inv_on_running_cars_[i].back()->get_current_road_pos() > 1 &&
+               this->inv_on_running_cars_[i].back()->get_state() == FINAL) {
+        return { i, this->inv_on_running_cars_[i].back()->get_current_road_pos() - 1 };
+      }
+    }
+  }
+
+  return { -1, 0 };
 }
+
+/*
+ * bool
+ * RoadOnline::is_filled(const int start_cross_id)
+ * {
+ *   if (start_cross_id == this->from_) {
+ *     for (auto &channel : this->dir_on_running_cars_) {
+ *       if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
+ *         return false;
+ *       }
+ *     }
+ *   }
+ * 
+ *   if (start_cross_id == this->to_) {
+ *     for (auto &channel : this->inv_on_running_cars_) {
+ *       if (channel.size() == 0 || channel.back()->get_current_road_pos() > 1) {
+ *         return false;
+ *       }
+ *     }
+ *   }
+ * 
+ *   return true;
+ * }
+ */
+
