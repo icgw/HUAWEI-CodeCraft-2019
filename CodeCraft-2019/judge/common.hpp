@@ -13,8 +13,7 @@ enum State { WAIT, FINAL, FINISH };
 class Identity {
 public:
   Identity(int i) : id_(i) {}
-
-  virtual ~Identity();
+  virtual ~Identity() {}
 
   int get_id() const;
 
@@ -25,6 +24,15 @@ private:
   Identity() = default;
 };
 
+/*{{{ Identity::get_id() */
+inline int
+Identity::get_id()
+  const
+{
+  return this->id_;
+}
+/*}}}*/
+
 class StartEnd : public Identity {
 public:
   StartEnd(int i, int speed, int from, int to)
@@ -32,8 +40,7 @@ public:
     , speed_(speed)
     , from_(from)
     , to_(to) {}
-
-  virtual ~StartEnd();
+  virtual ~StartEnd() {}
 
   int get_speed() const;
   int get_from()  const;
@@ -45,5 +52,28 @@ protected:
 private:
   StartEnd() = default;
 };
+
+/*{{{ StartEnd::get_speed(), get_from(), get_to() */
+inline int
+StartEnd::get_speed()
+  const
+{
+  return this->speed_;
+}
+
+inline int
+StartEnd::get_from()
+  const
+{
+  return this->from_;
+}
+
+inline int
+StartEnd::get_to()
+  const
+{
+  return this->to_;
+}
+/*}}}*/
 
 #endif // ifndef _COMMON_HPP_

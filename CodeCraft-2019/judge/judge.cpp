@@ -7,6 +7,18 @@
 
 #include "judge.hpp"
 
+Judge::Judge(std::string car_path,
+             std::string road_path,
+             std::string cross_path,
+             std::string preset_path,
+             std::string answer_path)
+{
+  this->init_car_road_cross(car_path, road_path, cross_path);
+  Cross cs      = this->crosses_[0]; std::cout << cs.get_id() << std::endl;
+  RoadOnline rd = this->roads_[0];   std::cout << rd.get_id() << std::endl;
+  RunningCar cr = this->cars_[0];    std::cout << cr.get_id() << std::endl;
+}
+
 void
 Judge::drive_just_current_road()
 {
@@ -90,3 +102,41 @@ Judge::is_finish()
   }
   return true;
 }
+
+void
+Judge::init_car_road_cross(const std::string car_path,
+                           const std::string road_path,
+                           const std::string cross_path)
+{
+  std::vector<std::vector<int>> cars, roads, crosses;
+  read_from_file(car_path   , CAR_COLUMN   , cars);
+  read_from_file(road_path  , ROAD_COLUMN  , roads);
+  read_from_file(cross_path , CROSS_COLUMN , crosses);
+
+  for (auto &c : cars) {
+    this->cars_.push_back(RunningCar(c[0], c[1], c[2], c[3], c[4], c[5], c[6]));
+  }
+  std::sort(this->cars_.begin(), this->cars_.end(),
+      [](const RunningCar &a, const RunningCar &b) -> bool {
+        return a.get_id() < b.get_id();
+      });
+
+  for (auto &r : roads) {
+    this->roads_.push_back(RoadOnline(r[0], r[1], r[2], r[3], r[4], r[5], r[6]));
+  } 
+  std::sort(this->roads_.begin(), this->roads_.end(),
+      [](const RoadOnline &a, const RoadOnline &b) -> bool {
+        return a.get_id() < b.get_id();
+      });
+
+  for (auto &cs : crosses) {
+    this->crosses_.push_back(Cross(cs[0], cs[1], cs[2], cs[3], cs[4]));
+  }
+  std::sort(this->crosses_.begin(), this->crosses_.end(),
+      [](const Cross &a, const Cross &b) -> bool {
+        return a.get_id() < b.get_id();
+      });
+
+  return;
+}
+

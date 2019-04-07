@@ -27,7 +27,22 @@ get_vec_from_ifs(std::ifstream &fin,           // IN:  string " 1, 2, 3, ...)"
   }
   return;
 }
+
+void get_vec_from_ifs(std::ifstream &fin,
+                      std::vector<int> &iv)
+{
+  std::string s; getline(fin, s);
+  std::stringstream ss(s);
+
+  char skip; ss >> skip;
+  int num;
+  while (ss >> num) {
+    iv.push_back(num); ss >> skip;
+  }
+  return;
+}
 /*}}}*/
+
 
 // read file from path and convert each line to vector.
 void
@@ -50,6 +65,28 @@ read_from_file(const std::string file_path,       // IN:  the path name of file
     }
   }
   fin.close();
+}
+
+void
+read_from_file(const std::string file_path,
+               std::vector<std::vector<int>> &iv)
+{
+  std::ifstream fin;
+  fin.open(file_path, std::fstream::in);
+  if (!fin) return;
+
+  std::vector<int> tmp_vec;
+  char st;
+  while (fin >> st) {
+    if ('#' == st) {
+      fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    } else {
+      get_vec_from_ifs(fin, tmp_vec);
+      iv.push_back(tmp_vec);
+    }
+  }
+  fin.close();
+  return;
 }
 
 /*{{{ convert string to integer vector.*/

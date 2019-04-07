@@ -5,7 +5,6 @@
  * Distributed under terms of the GPL license.
  */
 
-#include <algorithm>  // std::max
 #include "traffic.hpp"
 
 /*{{{ compare_priority... */
@@ -25,38 +24,6 @@ compare_priority_for_waiting_cars(RunningCar* const &c1,
   return (c1->get_current_road_channel() == c2->get_current_road_channel() && c1->get_current_road_pos() > c2->get_current_road_pos()) ||
          (c1->get_current_road_channel() != c2->get_current_road_channel() && c1->get_priority() > c2->get_priority()) ||
          (c1->get_current_road_channel() < c2->get_current_road_channel() && c1->get_priority() == c2->get_priority());
-}
-/*}}}*/
-
-/*{{{ Identity::get_id() */
-inline int
-Identity::get_id()
-  const
-{
-  return this->id_;
-}
-/*}}}*/
-
-/*{{{ StartEnd::get_speed(), get_from(), get_to() */
-inline int
-StartEnd::get_speed()
-  const
-{
-  return this->speed_;
-}
-
-inline int
-StartEnd::get_from()
-  const
-{
-  return this->from_;
-}
-
-inline int
-StartEnd::get_to()
-  const
-{
-  return this->to_;
 }
 /*}}}*/
 

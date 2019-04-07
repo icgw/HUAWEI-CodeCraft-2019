@@ -12,10 +12,11 @@
 #include <list>
 #include <utility> // std::pair
 #include <unordered_map>
+#include <algorithm>
 #include "common.hpp"
 
 /*{{{ class Car: id, from, to, speed, plan_time, priority, preset */
-class Car : virtual public StartEnd {
+class Car : public StartEnd {
 public:
   Car(int i, int from, int to, int speed, int plan_time, int priority, int preset)
     : StartEnd(i, speed, from, to)
@@ -38,7 +39,7 @@ private:
 /*}}}*/
 
 /*{{{ class Road: id, length, speed, channel, from, to, is_duplex */
-class Road : virtual public StartEnd {
+class Road : public StartEnd {
 public:
   Road(int i, int len, int speed, int channel, int from, int to, int is_duplex)
     : StartEnd(i, speed, from, to)
@@ -59,11 +60,13 @@ protected:
 /*{{{ class Cross: id, road_id, road_id, road_id, road_id */
 class RoadOnline;
 // XXX:
-class Cross : virtual public Identity {
+class Cross : public Identity {
 public:
   Cross(const int i, const int r1, const int r2, const int r3, const int r4)
     : Identity(i)
-    , roads_id_({ r1, r2, r3, r4 }) {}
+    , roads_id_({ r1, r2, r3, r4 }) {
+      std::sort(this->roads_id_.begin(), this->roads_id_.end());
+    }
 
   std::vector<RoadOnline*> get_roads();
 
@@ -82,6 +85,9 @@ class RoadOnline;
 class Cross;
 class RunningCar : virtual public Car {
 public:
+  RunningCar(int i, int from, int to, int speed, int plan_time, int priority, int preset)
+    : Car(i, from, to, speed, plan_time, priority, preset) {}
+
   int   get_start_time()           const;
   int   get_current_road_pos()     const;
   State get_state()                const;
@@ -114,17 +120,25 @@ private:
   RunningCar() = default;
 };
 
-class RoadInitCarList : virtual public Road {
+class RoadInitCarList : public Road {
 public:
+  RoadInitCarList(int id, int len, int speed, int channel, int from, int to, int is_duplex)
+    : Road(id, len, speed, channel, from, to, is_duplex) {}
   void create_car_sequence_for_ready_car();
 
 protected:
   std::list<RunningCar*> dir_cars_;
   std::list<RunningCar*> inv_cars_;
+
+private:
+  RoadInitCarList() = default;
 };
 
 class RoadOnline : virtual public RoadInitCarList {
 public:
+  RoadOnline(int id, int len, int speed, int channel, int from, int to, int is_duplex)
+    : RoadInitCarList(id, len, speed, channel, from, to, is_duplex) {}
+
   int get_num_of_wait_cars(const int start_cross_id) const;
 
   bool run_to_road(RunningCar* c, std::vector<std::list<RunningCar*>> &running_cars);

@@ -8,14 +8,28 @@
 #ifndef _JUDGE_HPP_
 #define _JUDGE_HPP_
 
+#include <iostream> // for testing
+
+#include <algorithm>
 #include <vector>
 #include <string>
+
 #include "traffic.hpp"
+#include "../io.hpp"
+
+// id, from, to, speed, plan_time, priority, preset
+constexpr int CAR_COLUMN   = 7;
+
+// id, length, speed, channel, from, to, is_duplex
+constexpr int ROAD_COLUMN  = 7;
+
+// id, road_id, road_id, road_id, road_id
+constexpr int CROSS_COLUMN = 5;
 
 class Judge {
 public:
   // TODO: process input data.
-  Judge(std::string car_path, std::string cross_path, std::string preset_path, std::string road_path);
+  Judge(std::string car_path, std::string road_path, std::string cross_path, std::string preset_path, std::string answer_path);
 
   void drive_just_current_road();
   void drive_car_init_list(const int current_time, const bool is_priority);
@@ -25,6 +39,8 @@ public:
 
 private:
   Judge() = default;
+
+  void init_car_road_cross(const std::string car_path, const std::string road_path, const std::string cross_path);
 
   // sort cross by id ascending. and each road id ascending.
   std::vector<Cross>      crosses_;
