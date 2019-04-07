@@ -124,7 +124,7 @@ protected:
 
 class RoadOnline : virtual public RoadInitCarList {
 public:
-  bool run_to_road(RunningCar* c, std::vector<std::vector<RunningCar*>> &running_cars);
+  bool run_to_road(RunningCar* c, std::vector<std::list<RunningCar*>> &running_cars);
   void run_car_in_init_list(int current_time);
   void drive_just_current_road(const int channel, const int start_cross_id);
   void drive_just_current_road();
@@ -132,20 +132,26 @@ public:
   bool is_final_filled(const int start_cross_id);
   std::pair<int, int> select_valid_channel(const int start_cross_id);
 
+  // @deprecated
+  void pop_front_car(const int channel, const int start_cross_id);
+
+  void remove_car(const int channel, const int start_cross_id, RunningCar* const car);
+  void push_back_car(const int channel, const int start_cross_id, RunningCar* const car);
+
 protected:
-  std::vector<std::vector<RunningCar*>> dir_on_running_cars_;
-  std::vector<std::list<RunningCar*>> dir_on_running_cars_ls;
+  std::vector<std::list<RunningCar*>> dir_on_running_cars_ls_;
+
   // TODO:
   std::priority_queue<RunningCar*> dir_on_waiting_cars_pq;
 
-  std::vector<std::vector<RunningCar*>> inv_on_running_cars_;
-  std::vector<std::list<RunningCar*>> inv_on_running_cars_ls;
+  std::vector<std::list<RunningCar*>> inv_on_running_cars_ls_;
+
   // TODO:
   std::priority_queue<RunningCar*> inv_on_waiting_cars_pq;
 
 private:
-  void run_car_in_init_list(const int current_time, std::list<RunningCar*> &init_list, std::vector<std::vector<RunningCar*>> &running_cars);
-  void drive_just_current_road(const int channel, std::vector<std::vector<RunningCar*>> &cars);
+  void run_car_in_init_list(const int current_time, std::list<RunningCar*> &init_list, std::vector<std::list<RunningCar*>> &running_cars);
+  void drive_just_current_road(const int channel, std::vector<std::list<RunningCar*>> &cars);
 };
 
 #endif // ifndef _TRAFFIC_HPP_
