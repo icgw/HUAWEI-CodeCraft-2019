@@ -9,13 +9,18 @@
 #define _JUDGE_HPP_
 
 #include <vector>
+#include <string>
 #include "traffic.hpp"
 
 class Judge {
 public:
+  // TODO: process input data.
+  Judge(std::string car_path, std::string cross_path, std::string preset_path, std::string road_path);
+
   void drive_just_current_road();
-  void drive_car_init_list();
-  bool drive_car_in_wait_state();
+  void drive_car_init_list(const int current_time, const bool is_priority);
+  void create_car_sequence();
+  bool drive_car_in_wait_state(const int current_time);
   bool is_finish();
 
 private:
@@ -23,7 +28,6 @@ private:
 
   // sort cross by id ascending. and each road id ascending.
   std::vector<Cross>      crosses_;
-
   std::vector<RoadOnline> roads_;
   std::vector<RunningCar> cars_;
 };

@@ -11,7 +11,6 @@
 #include <vector>
 #include <list>
 #include <utility> // std::pair
-#include <queue>   // std::priority_queue
 #include <unordered_map>
 #include "common.hpp"
 
@@ -48,6 +47,7 @@ public:
     , is_duplex_(is_duplex) {}
 
   int get_length() const;
+  int get_duplex() const;
 
 protected:
   int     length_;
@@ -65,6 +65,8 @@ public:
     : Identity(i)
     , roads_id_({ r1, r2, r3, r4 }) {}
 
+  std::vector<RoadOnline*> get_roads();
+
   void init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline);
 
 protected:
@@ -80,10 +82,12 @@ class RoadOnline;
 class Cross;
 class RunningCar : virtual public Car {
 public:
-  int   get_start_time()       const;
-  int   get_current_road_pos() const;
-  State get_state()            const;
+  int   get_start_time()           const;
+  int   get_current_road_pos()     const;
+  State get_state()                const;
   int   get_current_road_channel() const;
+
+  bool is_conflict() const;
 
   void set_current_road_pos(const int p);
   void set_current_road_channel(const int channel);
@@ -96,18 +100,15 @@ public:
   void drive(const int speed);
 
 protected:
-  int           start_time_;
-  State              state_;
+  int                      start_time_;
+  int                      idx_of_current_road_;
+  int                      current_road_pos_;
+  int                      next_road_pos_;
+  int                      current_road_channel_;
+  State                    state_;
 
-  int  idx_of_current_road_;
-
-  int     current_road_pos_;
-  int        next_road_pos_;
-
-  int current_road_channel_;
-
-  std::vector<RoadOnline*>   path_;
-  std::vector<Cross*>        start_cross_id_sequence_;
+  std::vector<RoadOnline*> path_;
+  std::vector<Cross*>      start_cross_id_sequence_;
 
 private:
   RunningCar() = default;
@@ -115,7 +116,7 @@ private:
 
 class RoadInitCarList : virtual public Road {
 public:
-  void create_car_sequence();
+  void create_car_sequence_for_ready_car();
 
 protected:
   std::list<RunningCar*> dir_cars_;
@@ -124,34 +125,35 @@ protected:
 
 class RoadOnline : virtual public RoadInitCarList {
 public:
+  int get_num_of_wait_cars(const int start_cross_id) const;
+
   bool run_to_road(RunningCar* c, std::vector<std::list<RunningCar*>> &running_cars);
-  void run_car_in_init_list(int current_time);
-  void drive_just_current_road(const int channel, const int start_cross_id);
+  void run_car_in_init_list(const int current_time, const bool is_priority);
+
+  void drive_just_current_road(const int channel, const int start_cross_id, const bool for_wait_car);
   void drive_just_current_road();
 
   bool is_final_filled(const int start_cross_id);
   std::pair<int, int> select_valid_channel(const int start_cross_id);
 
-  // @deprecated
-  void pop_front_car(const int channel, const int start_cross_id);
-
   void remove_car(const int channel, const int start_cross_id, RunningCar* const car);
   void push_back_car(const int channel, const int start_cross_id, RunningCar* const car);
 
+  void create_car_in_wait_sequence();
+  void pop_front_car_from_wait_sequence(const int start_cross_id);
+
+  RunningCar* get_front_car_from_wait_sequence(const int start_cross_id);
+
 protected:
   std::vector<std::list<RunningCar*>> dir_on_running_cars_ls_;
-
-  // TODO:
-  std::priority_queue<RunningCar*> dir_on_waiting_cars_pq;
+  std::list<RunningCar*>              dir_on_waiting_cars_ls_;
 
   std::vector<std::list<RunningCar*>> inv_on_running_cars_ls_;
-
-  // TODO:
-  std::priority_queue<RunningCar*> inv_on_waiting_cars_pq;
+  std::list<RunningCar*>              inv_on_waiting_cars_ls_;
 
 private:
-  void run_car_in_init_list(const int current_time, std::list<RunningCar*> &init_list, std::vector<std::list<RunningCar*>> &running_cars);
-  void drive_just_current_road(const int channel, std::vector<std::list<RunningCar*>> &cars);
+  void run_car_in_init_list(const int current_time, const bool is_priority, std::list<RunningCar*> &init_list, std::vector<std::list<RunningCar*>> &running_cars);
+  void drive_just_current_road(const int channel, std::vector<std::list<RunningCar*>> &cars, const bool for_wait_car);
 };
 
 #endif // ifndef _TRAFFIC_HPP_
