@@ -1,7 +1,7 @@
 JUDGE    = main
 CXXFLAGS = -std=c++11 -O2
 PROGRAM  = $(JUDGE)
-CXX      = clang++
+CXX      = g++
 RM       = rm -f
 SRCS     = ../io.cpp traffic.cpp judge.cpp main.cpp
 OBJS     = io.o traffic.o judge.o main.o

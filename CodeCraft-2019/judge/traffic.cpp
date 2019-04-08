@@ -27,51 +27,6 @@ compare_priority_for_waiting_cars(RunningCar* const &c1,
 }
 /*}}}*/
 
-/*{{{ Car::get_plan_time(), get_priority(), get_preset() */
-inline int
-Car::get_plan_time()
-  const
-{
-  return this->plan_time_;
-}
-
-inline int
-Car::get_priority()
-  const
-{
-  return this->priority_;
-}
-
-inline int
-Car::get_preset()
-  const
-{
-  return this->preset_;
-}
-/*}}}*/
-
-/*{{{ Road::get_length() */
-inline int
-Road::get_length()
-  const
-{
-  return this->length_;
-}
-
-inline int
-Road::get_duplex()
-  const
-{
-  return this->is_duplex_;
-}
-/*}}}*/
-
-inline std::vector<RoadOnline*>
-Cross::get_roads()
-{
-  return this->roads_online_;
-}
-
 void
 Cross::init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline)
 {
@@ -83,75 +38,6 @@ Cross::init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline)
   }
   return;
 }
-
-/*{{{ RunningCar::get_start_time(), get_current_road_pos(), get_state(), set_current_road_pos(), set_state(), set_current_road_idx() */
-inline int
-RunningCar::get_start_time()
-  const
-{
-  return this->start_time_;
-}
-
-inline int
-RunningCar::get_current_road_pos()
-  const
-{
-  return this->current_road_pos_;
-}
-
-inline int
-RunningCar::get_current_road_channel()
-  const
-{
-  return this->current_road_channel_;
-}
-
-inline State
-RunningCar::get_state()
-  const
-{
-  return this->state_;
-}
-
-inline void
-RunningCar::set_current_road_pos(const int p)
-{
-  this->current_road_pos_ = p;
-  return;
-}
-
-inline void
-RunningCar::set_current_road_channel(const int channel)
-{
-  this->current_road_channel_ = channel;
-  return;
-}
-
-inline void
-RunningCar::set_state(const State s)
-{
-  this->state_ = s;
-  return;
-}
-
-inline void
-RunningCar::set_current_road_idx(const std::size_t idx)
-{
-  this->idx_of_current_road_ = idx;
-  return;
-}
-
-inline bool
-RunningCar::is_conflict()
-  const
-{
-  // XXX: probably have some bugs.
-  auto idx = this->idx_of_current_road_;
-  auto cross_id = this->start_cross_id_sequence_[idx]->get_id();
-  return this->path_[idx]->get_from() == cross_id ||
-        (this->path_[idx]->get_duplex() != 0 && this->path_[idx]->get_to() == cross_id);
-}
-/*}}}*/
 
 void
 RunningCar::init(std::vector<RoadOnline*> &p)
@@ -250,19 +136,6 @@ RoadInitCarList::create_car_sequence_for_ready_car()
     inv_cars_.sort(compare_priority_for_init_list);
   }
   return;
-}
-
-inline int
-RoadOnline::get_num_of_wait_cars(const int start_cross_id)
-  const
-{
-  if (start_cross_id == this->from_) {
-    return this->dir_on_waiting_cars_ls_.size();
-  }
-  else if (start_cross_id == this->to_) {
-    return this->inv_on_waiting_cars_ls_.size();
-  }
-  return 0;
 }
 
 void

@@ -36,6 +36,27 @@ protected:
 private:
   Car() = default;
 };
+
+inline int
+Car::get_plan_time()
+  const
+{
+  return this->plan_time_;
+}
+
+inline int
+Car::get_priority()
+  const
+{
+  return this->priority_;
+}
+
+inline int
+Car::get_preset()
+  const
+{
+  return this->preset_;
+}
 /*}}}*/
 
 /*{{{ class Road: id, length, speed, channel, from, to, is_duplex */
@@ -55,6 +76,20 @@ protected:
   int    channel_;
   bool is_duplex_;
 };
+
+inline int
+Road::get_length()
+  const
+{
+  return this->length_;
+}
+
+inline int
+Road::get_duplex()
+  const
+{
+  return this->is_duplex_;
+}
 /*}}}*/
 
 /*{{{ class Cross: id, road_id, road_id, road_id, road_id */
@@ -69,7 +104,6 @@ public:
     }
 
   std::vector<RoadOnline*> get_roads();
-
   void init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline);
 
 protected:
@@ -79,8 +113,16 @@ protected:
 private:
   Cross() = default;
 };
+
+inline std::vector<RoadOnline*>
+Cross::get_roads()
+{
+  return this->roads_online_;
+}
 /*}}}*/
 
+/*{{{ class RunningCar*/
+class RoadInitCarList;
 class RoadOnline;
 class Cross;
 class RunningCar : virtual public Car {
@@ -119,6 +161,64 @@ protected:
 private:
   RunningCar() = default;
 };
+
+inline int
+RunningCar::get_start_time()
+  const
+{
+  return this->start_time_;
+}
+
+inline int
+RunningCar::get_current_road_pos()
+  const
+{
+  return this->current_road_pos_;
+}
+
+inline int
+RunningCar::get_current_road_channel()
+  const
+{
+  return this->current_road_channel_;
+}
+
+inline State
+RunningCar::get_state()
+  const
+{
+  return this->state_;
+}
+
+inline void
+RunningCar::set_current_road_pos(const int p)
+{
+  this->current_road_pos_ = p;
+  return;
+}
+
+inline void
+RunningCar::set_current_road_channel(const int channel)
+{
+  this->current_road_channel_ = channel;
+  return;
+}
+
+inline void
+RunningCar::set_state(const State s)
+{
+  this->state_ = s;
+  return;
+}
+
+inline void
+RunningCar::set_current_road_idx(const std::size_t idx)
+{
+  this->idx_of_current_road_ = idx;
+  return;
+}
+
+/*}}}*/
 
 class RoadInitCarList : public Road {
 public:
@@ -169,5 +269,29 @@ private:
   void run_car_in_init_list(const int current_time, const bool is_priority, std::list<RunningCar*> &init_list, std::vector<std::list<RunningCar*>> &running_cars);
   void drive_just_current_road(const int channel, std::vector<std::list<RunningCar*>> &cars, const bool for_wait_car);
 };
+
+inline int
+RoadOnline::get_num_of_wait_cars(const int start_cross_id)
+  const
+{
+  if (start_cross_id == this->from_) {
+    return this->dir_on_waiting_cars_ls_.size();
+  }
+  else if (start_cross_id == this->to_) {
+    return this->inv_on_waiting_cars_ls_.size();
+  }
+  return 0;
+}
+
+inline bool
+RunningCar::is_conflict()
+  const
+{
+  // XXX: probably have some bugs.
+  auto idx = this->idx_of_current_road_;
+  auto cross_id = this->start_cross_id_sequence_[idx]->get_id();
+  return this->path_[idx]->get_from() == cross_id ||
+        (this->path_[idx]->get_duplex() != 0 && this->path_[idx]->get_to() == cross_id);
+}
 
 #endif // ifndef _TRAFFIC_HPP_

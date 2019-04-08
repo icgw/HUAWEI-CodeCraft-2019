@@ -48,4 +48,17 @@ private:
   std::vector<RunningCar> cars_;
 };
 
+inline
+Judge::Judge(std::string car_path,
+             std::string road_path,
+             std::string cross_path,
+             std::string preset_path,
+             std::string answer_path)
+{
+  this->init_car_road_cross(car_path, road_path, cross_path);
+  Cross cs      = this->crosses_[0]; std::cout << cs.get_id() << std::endl;
+  RoadOnline rd = this->roads_[0];   std::cout << rd.get_id() << std::endl;
+  RunningCar cr = this->cars_[0];    std::cout << cr.get_id() << std::endl;
+}
+
 #endif // ifndef _JUDGE_HPP_
