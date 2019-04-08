@@ -8,6 +8,8 @@
 #ifndef _TRAFFIC_HPP_
 #define _TRAFFIC_HPP_
 
+#include <iostream> // DEBUG
+
 #include <vector>
 #include <list>
 #include <utility> // std::pair
@@ -142,10 +144,12 @@ public:
   RunningCar(int i, int from, int to, int speed, int plan_time, int priority, int preset)
     : Car(i, from, to, speed, plan_time, priority, preset) {}
 
-  int   get_start_time()           const;
-  int   get_current_road_pos()     const;
-  State get_state()                const;
-  int   get_current_road_channel() const;
+  int         get_start_time()           const;
+  int         get_current_road_pos()     const;
+  State       get_state()                const;
+  int         get_current_road_channel() const;
+  RoadOnline* get_src_road()             const;
+  int         get_end_time()             const;
 
   bool is_conflict() const;
 
@@ -154,9 +158,6 @@ public:
   void set_state(const State s);
   void set_current_road_idx(const std::size_t idx);
 
-  // @deprecated
-  void init(std::vector<RoadOnline*> &p);
-
   void init(const int start_time, std::vector<RoadOnline*> &p, std::map<std::pair<RoadOnline*, RoadOnline*>, Cross*> &m, std::unordered_map<int, Cross*> &cs_id_to_pcs);
   bool move_to_next_road();
 
@@ -164,6 +165,7 @@ public:
 
 protected:
   int                      start_time_;
+  int                      end_time_;
   int                      idx_of_current_road_;
   int                      current_road_pos_;
   int                      next_road_pos_;
@@ -233,6 +235,12 @@ RunningCar::set_current_road_idx(const std::size_t idx)
   return;
 }
 
+inline int
+RunningCar::get_end_time()
+  const
+{
+  return this->end_time_;
+}
 /*}}}*/
 
 class RoadInitCarList : public Road {
@@ -240,6 +248,8 @@ public:
   RoadInitCarList(int id, int len, int speed, int channel, int from, int to, int is_duplex)
     : Road(id, len, speed, channel, from, to, is_duplex) {}
   void create_car_sequence_for_ready_car();
+
+  void push(RunningCar* const p_car, const int start_cross_id);
 
 protected:
   std::list<RunningCar*> dir_cars_;
@@ -249,10 +259,28 @@ private:
   RoadInitCarList() = default;
 };
 
+inline void
+RoadInitCarList::push(RunningCar* const p_car,
+                      const int start_cross_id)
+{
+  if (start_cross_id == this->from_) {
+    this->dir_cars_.push_back(p_car);
+  }
+  else if (start_cross_id == this->to_) {
+    this->inv_cars_.push_back(p_car);
+  }
+  return;
+}
+
 class RoadOnline : virtual public RoadInitCarList {
 public:
   RoadOnline(int id, int len, int speed, int channel, int from, int to, int is_duplex)
-    : RoadInitCarList(id, len, speed, channel, from, to, is_duplex) {}
+    : RoadInitCarList(id, len, speed, channel, from, to, is_duplex) {
+      this->dir_on_running_cars_ls_.resize(channel);
+      if (1 == is_duplex) {
+        this->inv_on_running_cars_ls_.resize(channel);
+      }
+    }
 
   int get_num_of_wait_cars(const int start_cross_id) const;
 
@@ -305,8 +333,17 @@ RunningCar::is_conflict()
   // XXX: probably have some bugs.
   auto idx = this->idx_of_current_road_;
   auto cross_id = this->start_cross_id_sequence_[idx]->get_id();
-  return this->path_[idx]->get_from() == cross_id ||
-        (this->path_[idx]->get_duplex() != 0 && this->path_[idx]->get_to() == cross_id);
+  return this->path_[idx]->get_from() != cross_id && this->path_[idx]->get_to() != cross_id;
+}
+
+inline RoadOnline*
+RunningCar::get_src_road()
+  const
+{
+  if (this->path_.empty()) {
+    return nullptr;
+  }
+  return this->path_[0];
 }
 
 #endif // ifndef _TRAFFIC_HPP_

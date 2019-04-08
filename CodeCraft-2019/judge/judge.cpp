@@ -5,6 +5,7 @@
  * Distributed under terms of the GPL license.
  */
 
+#include <iostream> // DEBUG
 #include "judge.hpp"
 
 void
@@ -34,30 +35,35 @@ Judge::create_car_sequence()
   }
   return;
 }
-
 bool
 Judge::drive_car_in_wait_state(const int current_time)
 {
   // XXX: prev_num_of_wait_car may be exist better implementation.
   int prev_num_of_wait_car = 0x7fffffff;
+  int num_of_wait_car;
   while (true) {
-    int num_of_wait_car = 0;
+    num_of_wait_car = 0;
     for (auto &c : this->crosses_) {
       for (auto r : c.get_roads()) {
         RunningCar* car;
         while ((car = r->get_front_car_from_wait_sequence(c.get_id())) != nullptr) {
           if (car->is_conflict()) {
             // XXX: something error.
+            std::cout << "conflict.\n";
             break;
           }
 
           auto prev_channel = car->get_current_road_channel();
           if (car->move_to_next_road()) {
+            if (car->get_state() == WAIT) {
+              std::cout << "STILL WAIT.\n";
+            }
             r->drive_just_current_road(prev_channel, c.get_id(), true);
             r->create_car_in_wait_sequence();
             r->run_car_in_init_list(current_time, true);
-            // XXX: addition.
-            r->pop_front_car_from_wait_sequence(c.get_id());
+
+            // XXX: something wrong?
+            // r->pop_front_car_from_wait_sequence(c.get_id());
           } else {
             break;
           }
@@ -65,8 +71,13 @@ Judge::drive_car_in_wait_state(const int current_time)
         num_of_wait_car += r->get_num_of_wait_cars(c.get_id());
       }
     }
+
     if (num_of_wait_car >= prev_num_of_wait_car) {
       break;
+    }
+
+    if (num_of_wait_car == 0) {
+      return true;
     }
 
     prev_num_of_wait_car = num_of_wait_car;
@@ -89,6 +100,16 @@ Judge::is_finish()
     }
   }
   return true;
+}
+
+int
+Judge::get_all_schedule_time()
+{
+  int all_schedule_time = 0;
+  for (auto &c : this->cars_) {
+    all_schedule_time += c.get_end_time();
+  }
+  return all_schedule_time;
 }
 
 void
@@ -165,17 +186,25 @@ Judge::init_car_road_cross(const std::string car_path,
 }
 
 void
-Judge::init_preset_cars(std::vector<std::vector<int>> &preset)
+Judge::init_cars_path(std::vector<std::vector<int>> &schedule,
+                      const int b_preset) // IN: 1, preset; IN: 0, not preset.
 {
-  // TODO:
-  return;
-}
+  for (auto &v : schedule) {
+    auto id = v[0];
+    auto is_preset = this->m_id_to_pcar_[id]->get_preset();
+    if (b_preset != is_preset) {
+      // XXX: logging something error.
+      continue;
+    }
 
-void
-Judge::init_answer_cars(std::vector<std::vector<int>> &answer)
-{
-  // TODO:
-  // init(start_time, path, m, cs_id_to_pcs)
+    std::vector<RoadOnline*> this_path;
+    this_path.clear();
+    auto sz = v.size();
+    for (auto i = 2; i < sz; ++i) {
+      this_path.push_back(this->m_id_to_proad_[v[i]]);
+    }
+    this->m_id_to_pcar_[id]->init(v[1], this_path, this->m_pair_proads_to_pcross_, this->m_id_to_pcross_);
+  }
   return;
 }
 
@@ -187,11 +216,15 @@ Judge::init_preset_and_answer_path(const std::string preset_path,
   read_from_file(preset_path, preset);
   read_from_file(answer_path, answer);
 
-  // TODO: initiating cars_
-  this->init_preset_cars(preset);
-  this->init_answer_cars(answer);
+  this->init_cars_path(preset, 1);
+  this->init_cars_path(answer, 0);
 
-  // TODO: initiating  roads_
+  for (auto &cr : this->cars_) {
+    RoadOnline* road = cr.get_src_road();
+    if (road) {
+      road->push(&cr, cr.get_from());
+    }
+  }
 
   return;
 }

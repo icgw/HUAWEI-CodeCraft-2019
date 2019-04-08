@@ -30,14 +30,15 @@ public:
   bool drive_car_in_wait_state(const int current_time);
   bool is_finish();
 
+  int get_all_schedule_time();
+
 private:
   Judge() = default;
 
   void init_car_road_cross(const std::string car_path, const std::string road_path, const std::string cross_path);
   void init_preset_and_answer_path(const std::string preset_path, const std::string answer_path);
 
-  void init_preset_cars(std::vector<std::vector<int>> &preset);
-  void init_answer_cars(std::vector<std::vector<int>> &answer);
+  void init_cars_path(std::vector<std::vector<int>> &schedule, const int b_preset);
 
   // sort cross by id ascending. and each road id ascending.
   std::vector<Cross>      crosses_;
