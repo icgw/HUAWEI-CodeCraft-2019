@@ -12,6 +12,7 @@
 #include <list>
 #include <utility> // std::pair
 #include <unordered_map>
+#include <map>
 #include <algorithm>
 #include "common.hpp"
 
@@ -104,7 +105,7 @@ public:
     }
 
   std::vector<RoadOnline*> get_roads();
-  void init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline);
+  void init(std::unordered_map<int, RoadOnline*> &road_id_to_roadonline);
 
 protected:
   std::vector<int> roads_id_;
@@ -119,10 +120,21 @@ Cross::get_roads()
 {
   return this->roads_online_;
 }
+
+inline void
+Cross::init(std::unordered_map<int, RoadOnline*> &road_id_to_roadonline)
+{
+  for (auto id : this->roads_id_) {
+    if (id == -1) {
+      continue;
+    }
+    this->roads_online_.push_back(road_id_to_roadonline[id]);
+  }
+  return;
+}
 /*}}}*/
 
 /*{{{ class RunningCar*/
-class RoadInitCarList;
 class RoadOnline;
 class Cross;
 class RunningCar : virtual public Car {
@@ -142,7 +154,10 @@ public:
   void set_state(const State s);
   void set_current_road_idx(const std::size_t idx);
 
+  // @deprecated
   void init(std::vector<RoadOnline*> &p);
+
+  void init(const int start_time, std::vector<RoadOnline*> &p, std::map<std::pair<RoadOnline*, RoadOnline*>, Cross*> &m, std::unordered_map<int, Cross*> &cs_id_to_pcs);
   bool move_to_next_road();
 
   void drive(const int speed);

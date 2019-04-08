@@ -1,3 +1,8 @@
+#
+# Guowei Chen <icgw@outlook.com>
+#   04/08/2018
+################################
+
 JUDGE    = main
 CXXFLAGS = -std=c++11 -O2
 PROGRAM  = $(JUDGE)

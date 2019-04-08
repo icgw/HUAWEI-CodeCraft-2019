@@ -8,23 +8,16 @@
 #ifndef _JUDGE_HPP_
 #define _JUDGE_HPP_
 
-#include <iostream> // for testing
-
 #include <algorithm>
 #include <vector>
 #include <string>
 
+#include <unordered_map>
+#include <utility>
+#include <map>
+
 #include "traffic.hpp"
 #include "../io.hpp"
-
-// id, from, to, speed, plan_time, priority, preset
-constexpr int CAR_COLUMN   = 7;
-
-// id, length, speed, channel, from, to, is_duplex
-constexpr int ROAD_COLUMN  = 7;
-
-// id, road_id, road_id, road_id, road_id
-constexpr int CROSS_COLUMN = 5;
 
 class Judge {
 public:
@@ -41,11 +34,23 @@ private:
   Judge() = default;
 
   void init_car_road_cross(const std::string car_path, const std::string road_path, const std::string cross_path);
+  void init_preset_and_answer_path(const std::string preset_path, const std::string answer_path);
+
+  void init_preset_cars(std::vector<std::vector<int>> &preset);
+  void init_answer_cars(std::vector<std::vector<int>> &answer);
 
   // sort cross by id ascending. and each road id ascending.
   std::vector<Cross>      crosses_;
   std::vector<RoadOnline> roads_;
   std::vector<RunningCar> cars_;
+
+  // map id -> pointer
+  std::unordered_map<int, RunningCar*> m_id_to_pcar_;
+  std::unordered_map<int, RoadOnline*> m_id_to_proad_;
+  std::unordered_map<int, Cross*>      m_id_to_pcross_;
+
+  // map (road1, road2) --> cross
+  std::map<std::pair<RoadOnline*, RoadOnline*>, Cross*> m_pair_proads_to_pcross_;
 };
 
 inline
@@ -56,9 +61,7 @@ Judge::Judge(std::string car_path,
              std::string answer_path)
 {
   this->init_car_road_cross(car_path, road_path, cross_path);
-  Cross cs      = this->crosses_[0]; std::cout << cs.get_id() << std::endl;
-  RoadOnline rd = this->roads_[0];   std::cout << rd.get_id() << std::endl;
-  RunningCar cr = this->cars_[0];    std::cout << cr.get_id() << std::endl;
+  this->init_preset_and_answer_path(preset_path, answer_path);
 }
 
 #endif // ifndef _JUDGE_HPP_

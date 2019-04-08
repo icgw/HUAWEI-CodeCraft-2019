@@ -27,18 +27,7 @@ compare_priority_for_waiting_cars(RunningCar* const &c1,
 }
 /*}}}*/
 
-void
-Cross::init(std::unordered_map<int, RoadOnline*> road_id_to_roadonline)
-{
-  for (auto id : this->roads_id_) {
-    if (id == -1) {
-      continue;
-    }
-    this->roads_online_.push_back(road_id_to_roadonline[id]);
-  }
-  return;
-}
-
+// @deprecated
 void
 RunningCar::init(std::vector<RoadOnline*> &p)
 {
@@ -49,6 +38,30 @@ RunningCar::init(std::vector<RoadOnline*> &p)
   this->next_road_pos_        = 0;
 
   this->idx_of_current_road_  = -1;
+}
+
+void
+RunningCar::init(const int start_time,
+                 std::vector<RoadOnline*> &p,
+                 std::map<std::pair<RoadOnline*, RoadOnline*>, Cross*> &m,
+                 std::unordered_map<int, Cross*> &cs_id_to_pcs)
+{
+  this->start_time_                       = start_time;
+  this->path_.assign(p.begin(), p.end());
+
+  this->idx_of_current_road_              = 1;
+  this->current_road_pos_                 = 0;
+  this->next_road_pos_                    = 0;
+  this->current_road_channel_             = -1;
+  this->state_                            = FINAL;
+
+  // initiating start_cross_id_sequence_
+  this->start_cross_id_sequence_.push_back(cs_id_to_pcs[this->from_]);
+  auto sz = this->path_.size();
+  for (auto i = 1; i < sz; ++i) {
+    this->start_cross_id_sequence_.push_back(m[{ this->path_[i - 1], this->path_[i] }]);
+  }
+  return;
 }
 
 bool

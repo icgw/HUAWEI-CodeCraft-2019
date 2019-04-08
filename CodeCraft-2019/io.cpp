@@ -34,15 +34,14 @@ void get_vec_from_ifs(std::ifstream &fin,
   std::string s; getline(fin, s);
   std::stringstream ss(s);
 
-  char skip; ss >> skip;
-  int num;
+  char skip; int num;
+  iv.clear();
   while (ss >> num) {
     iv.push_back(num); ss >> skip;
   }
   return;
 }
 /*}}}*/
-
 
 // read file from path and convert each line to vector.
 void
@@ -54,12 +53,12 @@ read_from_file(const std::string file_path,       // IN:  the path name of file
   fin.open(file_path, std::fstream::in);
   if (!fin) return;
 
-  std::vector<int> tmp_vec(column);
   char st;
   while (fin >> st) {
     if ('#' == st) {
       fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     } else {
+      std::vector<int> tmp_vec(column);
       get_vec_from_ifs(fin, column, tmp_vec);
       iv.push_back(tmp_vec);
     }
