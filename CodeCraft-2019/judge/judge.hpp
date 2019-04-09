@@ -32,6 +32,8 @@ public:
 
   int get_all_schedule_time();
 
+  void deadlock_info();
+
 private:
   Judge() = default;
 
@@ -52,6 +54,11 @@ private:
 
   // map (road1, road2) --> cross
   std::map<std::pair<RoadOnline*, RoadOnline*>, Cross*> m_pair_proads_to_pcross_;
+
+  // Deadlock info.
+  std::vector<int> deadlock_cross_id_;
+  std::vector<int> waiting_cars_id_;
+  std::vector<int> overload_road_id_;
 };
 
 inline

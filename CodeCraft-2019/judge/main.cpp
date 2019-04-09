@@ -26,25 +26,29 @@ int main(int argc, char *argv[])
   int timer = 0;
   while (true) {
     ++timer;
+    std::cout << "\rTime: " << timer;
+
     scheduler.drive_just_current_road();
     scheduler.drive_car_init_list(timer, true);
     scheduler.create_car_sequence();
+
     if (!scheduler.drive_car_in_wait_state(timer)) {
       // XXX: deadlock
-      std::cout << "deadlock\n" << std::endl;
+      std::cout << "\nTime: " << timer <<  ", Deadlock!\n" << std::endl;
+      scheduler.deadlock_info();
       return -1;
     }
 
     scheduler.drive_car_init_list(timer, false);
-
     if (scheduler.is_finish()) {
       // XXX: all cars finished.
-      std::cout << "Original Result: schedule time = " << timer << ", " 
+      std::cout << "\nOriginal Result: schedule time = " << timer << ", " 
                 << "all schedule time = " << scheduler.get_all_schedule_time()
                 << "\n";
       return 0;
     }
   }
+  std::cout << "\n";
 
   return 0;
 }

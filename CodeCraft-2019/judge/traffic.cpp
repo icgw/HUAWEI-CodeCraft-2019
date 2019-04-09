@@ -42,7 +42,7 @@ RunningCar::init(const int start_time,
   this->current_road_pos_                 = 0;
   this->next_road_pos_                    = 0;
   this->current_road_channel_             = -1;
-  this->state_                            = FINAL;
+  this->state_                            = WAIT;
 
   // initiating start_cross_id_sequence_
   this->start_cross_id_sequence_.push_back(cs_id_to_pcs[this->from_]);
@@ -54,7 +54,7 @@ RunningCar::init(const int start_time,
 }
 
 bool
-RunningCar::move_to_next_road() // for waiting car.
+RunningCar::move_to_next_road() // for waiting car. XXX: require updateing!!!
 {
   if (FINISH == this->state_) {
     auto current_start_cross_id = this->start_cross_id_sequence_[this->idx_of_current_road_]->get_id();
@@ -68,7 +68,7 @@ RunningCar::move_to_next_road() // for waiting car.
 
   auto next_road_idx         = this->idx_of_current_road_ + 1;
   if (next_road_idx >= this->path_.size()) {
-    this->state_ = FINISH; // XXX: perhaps exist some errors.
+    this->state_                = FINISH; // XXX: perhaps exist some errors.
     auto current_start_cross_id = this->start_cross_id_sequence_[this->idx_of_current_road_]->get_id();
     this->path_.back()->remove_car(this->current_road_channel_, current_start_cross_id, this);
 
@@ -81,15 +81,15 @@ RunningCar::move_to_next_road() // for waiting car.
 
   if (next_road->is_final_filled(next_road_start_cross)) {
     this->current_road_pos_ = this->path_[this->idx_of_current_road_]->get_length();
-    this->state_ = FINAL;
+    this->state_            = FINAL;
 
     ++(this->end_time_);
     return true;
   }
 
   auto next_road_channel_and_pos = next_road->select_valid_channel(next_road_start_cross);
-  auto next_channel = next_road_channel_and_pos.first;
-  auto next_pos     = next_road_channel_and_pos.second;
+  auto next_channel              = next_road_channel_and_pos.first;
+  auto next_pos                  = next_road_channel_and_pos.second;
 
   if (next_channel >= 0) {
     auto current_start_cross_id = this->start_cross_id_sequence_[this->idx_of_current_road_]->get_id();
@@ -103,8 +103,8 @@ RunningCar::move_to_next_road() // for waiting car.
 
     auto next_start_cross_id = this->start_cross_id_sequence_[this->idx_of_current_road_]->get_id();
     this->path_[this->idx_of_current_road_]->push_back_car(this->current_road_channel_, next_start_cross_id, this);
-    return true;
     ++(this->end_time_);
+    return true;
   }
 
   return false;
@@ -139,8 +139,8 @@ RunningCar::drive(const int speed)
   int v2 = std::min(this->speed_, next_road->get_speed());
 
   this->current_road_pos_ = current_road_len;
-  this->next_road_pos_ = std::max(0, v2 - s1);
-  this->state_ = ((this->next_road_pos_ == 0) ? FINAL : WAIT);
+  this->next_road_pos_    = std::max(0, v2 - s1);
+  this->state_            = ((this->next_road_pos_ <= 0) ? FINAL : WAIT);
 
   if (FINAL == this->state_) {
     ++(this->end_time_);
@@ -202,8 +202,9 @@ RoadOnline::drive_just_current_road(const int channel,
   State prev_state = WAIT;
   for (auto c : cars[channel]) {
     if (for_wait_car && c->get_state() != WAIT) {
+      // XXX: perhap some bugs.
       prev_pos   = c->get_current_road_pos();
-      prev_state = c->get_state();
+      prev_state = FINAL;
       continue;
     }
 
@@ -213,7 +214,11 @@ RoadOnline::drive_just_current_road(const int channel,
         c->drive(prev_pos - c->get_current_road_pos() - 1);
       }
       // XXX: must not exist state `finish`.
-      c->set_state(prev_state);
+      if (prev_state == WAIT) {
+        c->set_state(WAIT);
+      } else {
+        c->set_state(FINAL); // XXX: exists some bugs
+      }
     } else {
       c->drive(v);
       c->set_state(FINAL);
@@ -419,19 +424,6 @@ RoadOnline::create_car_in_wait_sequence()
     }
   }
 
-  return;
-}
-
-void
-RoadOnline::pop_front_car_from_wait_sequence(const int start_cross_id)
-{
-  if (start_cross_id == this->from_) {
-    this->dir_on_waiting_cars_ls_.pop_front();
-  }
-  else if (1 == this->is_duplex_ && start_cross_id == this->to_) {
-    std::cout << "size: " << this->inv_on_waiting_cars_ls_.size() << std::endl;
-    this->inv_on_waiting_cars_ls_.pop_front();
-  }
   return;
 }
 

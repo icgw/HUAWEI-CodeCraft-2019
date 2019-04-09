@@ -151,6 +151,10 @@ public:
   RoadOnline* get_src_road()             const;
   int         get_end_time()             const;
 
+  // for deadlock info.
+  int         get_current_road_id();
+  int         get_current_road_goto_id();
+
   bool is_conflict() const;
 
   void set_current_road_pos(const int p);
@@ -297,7 +301,6 @@ public:
   void push_back_car(const int channel, const int start_cross_id, RunningCar* const car);
 
   void create_car_in_wait_sequence();
-  void pop_front_car_from_wait_sequence(const int start_cross_id);
 
   RunningCar* get_front_car_from_wait_sequence(const int start_cross_id);
 
@@ -346,4 +349,24 @@ RunningCar::get_src_road()
   return this->path_[0];
 }
 
+inline int
+RunningCar::get_current_road_id()
+{
+  auto idx = this->idx_of_current_road_;
+  return this->path_[idx]->get_id();
+}
+
+inline int
+RunningCar::get_current_road_goto_id()
+{
+  auto idx = this->idx_of_current_road_;
+  auto start_cross_id = this->start_cross_id_sequence_[idx]->get_id();
+  if (start_cross_id == this->path_[idx]->get_to()) {
+    return this->path_[idx]->get_from();
+  }
+  else if (start_cross_id == this->path_[idx]->get_from()) {
+    return this->path_[idx]->get_to();
+  }
+  return -1;
+}
 #endif // ifndef _TRAFFIC_HPP_

@@ -35,6 +35,6 @@
 *.tar.gz
 bin
 build
-config/*
+*config*/*
 .DS_Store
 *train*

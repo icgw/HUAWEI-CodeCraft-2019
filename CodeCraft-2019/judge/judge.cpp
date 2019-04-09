@@ -6,6 +6,7 @@
  */
 
 #include <iostream> // DEBUG
+#include <set>      // FOR DEADLOCK INFO
 #include "judge.hpp"
 
 void
@@ -63,7 +64,6 @@ Judge::drive_car_in_wait_state(const int current_time)
             r->run_car_in_init_list(current_time, true);
 
             // XXX: something wrong?
-            // r->pop_front_car_from_wait_sequence(c.get_id());
           } else {
             break;
           }
@@ -94,6 +94,19 @@ Judge::drive_car_in_wait_state(const int current_time)
 bool
 Judge::is_finish()
 {
+  /*
+   * int count = 0; bool flag = true;
+   * for (auto &c : this->cars_) {
+   *   if (FINISH != c.get_state()) {
+   *     flag = false;
+   *   } else {
+   *     count++;
+   *   }
+   * }
+   * std::cout << count << std::endl;
+   * return flag;
+   */
+
   for (auto &c : this->cars_) {
     if (FINISH != c.get_state()) {
       return false;
@@ -224,6 +237,50 @@ Judge::init_preset_and_answer_path(const std::string preset_path,
     if (road) {
       road->push(&cr, cr.get_from());
     }
+  }
+
+  return;
+}
+
+void
+Judge::deadlock_info()
+{
+  this->deadlock_cross_id_.clear();
+  this->waiting_cars_id_.clear();
+  this->overload_road_id_.clear();
+
+  int n = 0;
+  for (auto &cr : this->cars_) {
+    if (WAIT != cr.get_state()) {
+      continue;
+    }
+    auto car_id = cr.get_id();
+    auto road_id = cr.get_current_road_id();
+    auto goto_cross_id = cr.get_current_road_goto_id();
+    this->deadlock_cross_id_.push_back(goto_cross_id);
+    this->waiting_cars_id_.push_back(car_id);
+    this->overload_road_id_.push_back(road_id);
+    ++n;
+  }
+
+  /*
+   * for (auto i = 0; i < n; ++i) {
+   *   std::cout << "#Car: " << this->waiting_cars_id_[i] << ", "
+   *             << "#Goto_cross: " << this->deadlock_cross_id_[i] << ", "
+   *             << "#Current_road: " << this->overload_road_id_[i] << ".\n";
+   * }
+   */
+  std::cout << "Total Car: " << n << "\n";
+
+  std::set<int> cross_id(this->deadlock_cross_id_.begin(), this->deadlock_cross_id_.end());
+  std::cout << "Total cross: " << cross_id.size() << "\n";
+  for (auto cs : cross_id) {
+    std::cout << cs << "\n";
+  }
+  std::set<int> road_id(this->overload_road_id_.begin(), this->overload_road_id_.end());
+  std::cout << "Total road: " << road_id.size() << "\n";
+  for (auto rd : road_id) {
+    std::cout << rd << "\n";
   }
 
   return;

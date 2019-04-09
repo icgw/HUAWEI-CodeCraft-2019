@@ -4,7 +4,7 @@
 ################################
 
 JUDGE    = main
-CXXFLAGS = -std=c++11 -O2
+CXXFLAGS = -std=c++11 -O3
 PROGRAM  = $(JUDGE)
 CXX      = g++
 RM       = rm -f
