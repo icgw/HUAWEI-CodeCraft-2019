@@ -5,6 +5,7 @@
  * Distributed under terms of the GPL license.
  */
 
+#include <limits>
 #include <algorithm> // std::reverse
 #include <queue>     // std::priority_queue
 
@@ -15,11 +16,16 @@ Model::initIndex()
 {
   // XXX: after model initialization.
   auto sz = this->raw_crosses_.size();
+
+  this->size_ = sz;
+  this->node_info_.resize(sz);
   this->adjacency_.resize(sz);
 
   // TODO: create cross_id_to_index, wait to qualify.
   for (auto i = 0; i < sz; ++i) {
     this->cross_id_to_index_[this->raw_crosses_[i].id] = i;
+    this->node_info_[i].index  = i;
+    this->node_info_[i].volumn = 0;
   }
 
   // TODO: create cross_index_to_road_info_, adjacency_. wait to qualify.
@@ -43,7 +49,20 @@ Model::initIndex()
     }
   }
 
-  // TODO: car?
+  // TODO: create cars_to_run_
+  sz = this->raw_cars_.size();
+  for (auto i = 0; i < sz; ++i) {
+    if (this->raw_cars_[i].preset != 0) {
+      continue;
+    }
+    from_idx = this->cross_id_to_index_[this->raw_cars_[i].from];
+    to_idx = this->cross_id_to_index_[this->raw_cars_[i].to];
+    this->cars_to_run_.push_back(StartEndInfo(this->raw_cars_[i].id,
+                                              this->raw_cars_[i].plan_time,
+                                              from_idx,
+                                              to_idx,
+                                              this->raw_cars_[i].speed));
+  }
 
   return;
 }
@@ -51,16 +70,15 @@ Model::initIndex()
 Feedback
 Model::dijkstra(StartEndInfo &start_end,
                 std::function<bool (const NodeInfo&, const NodeInfo&)> cmp,
-                std::function<int (StartEndInfo&, NodeInfo&)> cost)
+                std::function<int (const StartEndInfo&, const NodeInfo&)> cost)
 {
-  Feedback fb;
+  Feedback fb; fb.t_path.clear();
   std::priority_queue<NodeInfo,
                       std::vector<NodeInfo>,
                       decltype(cmp)> pq(cmp);
 
   std::vector<int> trace (this->size_);
-  // std::map<int, int> dist;
-  std::vector<int> dist (this->size_);
+  std::vector<int> dist (this->size_, 0x3f3f3f3f);
 
   NodeInfo src;
   src.cost_time    = start_end.start_time;
@@ -69,7 +87,9 @@ Model::dijkstra(StartEndInfo &start_end,
   dist[src.index]  = cost(start_end, src);
   trace[src.index] = -1;
 
+  pq.push(src);
   int len, limit, min_v, v_cost_time;
+
   while (!pq.empty()) {
     NodeInfo u = pq.top();
     pq.pop();
@@ -82,22 +102,42 @@ Model::dijkstra(StartEndInfo &start_end,
         limit        = this->cross_index_to_road_info_[{ u.index, v_idx }].speed;
         min_v        = std::min(start_end.speed, limit);
         v_cost_time  = (len + min_v - 1) / min_v;
-        v.cost_time  = v_cost_time + u.cost_time;
+        this->node_info_[v_idx].cost_time = v_cost_time + u.cost_time;
         trace[v_idx] = u.index;
-
-        pq.push(v);
+        pq.push(this->node_info_[v_idx]);
       }
     }
   }
 
   int to = start_end.to_index;
-  fb.t_path.push_back(to);
   while (trace[to] != -1) {
-    fb.t_path.push_back(trace[to]);
+    fb.t_path.push_back(to);
+    to = trace[to];
   }
+
   fb.t_path.push_back(start_end.from_index);
   reverse(fb.t_path.begin(), fb.t_path.end());
-  fb.cost_time = dist[start_end.to_index];
+  fb.cost_time = this->node_info_[start_end.to_index].cost_time;
+
+  // std::vector<int> xpath = this->transform_path(fb.t_path);
 
   return fb;
+}
+
+void
+Model::run()
+{
+  auto priority_cmp = [](const NodeInfo &a, const NodeInfo &b) -> bool {
+    return false;
+  };
+
+  auto cost_func = [](const StartEndInfo &st, const NodeInfo &n) -> int {
+    return 1;
+  };
+
+  for (auto st : this->cars_to_run_) {
+    Feedback fb = this->dijkstra(st, priority_cmp, cost_func);
+  }
+
+  return;
 }

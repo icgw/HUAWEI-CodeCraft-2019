@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 
+#include "model.hpp"
+
 static const auto _ = []() -> bool {
   std::ios::sync_with_stdio(false);
   std::cin.tie(nullptr);
@@ -29,7 +31,9 @@ int main(int argc, char *argv[])
   std::cout << "answerPath is "       << answerPath       << std::endl;
 
   // TODO:read input filebuf
+  Model model(carPath, roadPath, crossPath, presetAnswerPath, answerPath);
   // TODO:process
+  model.run();
   // TODO:write output file
 
   return 0;
