@@ -45,7 +45,7 @@ void get_vec_from_ifs(std::ifstream &fin,
 
 // read file from path and convert each line to vector.
 void
-read_from_file(const std::string file_path,       // IN:  the path name of file
+read_from_file(const std::string &file_path,       // IN:  the path name of file
                const std::size_t column,          // IN:  the number of variable for each line
                std::vector<std::vector<int>> &iv) // OUT: the vector of integer vector
 {
@@ -67,7 +67,7 @@ read_from_file(const std::string file_path,       // IN:  the path name of file
 }
 
 void
-read_from_file(const std::string file_path,
+read_from_file(const std::string &file_path,
                std::vector<std::vector<int>> &iv)
 {
   std::ifstream fin;
@@ -107,8 +107,8 @@ get_str_from_ivec(const std::vector<int> &iv, // IN:  vector { 1, 2, 3, ... }
 
 // write the vector of integer vector into a file.
 void
-write_to_file(std::string &file_path,              // IN: the output path of file.
-              std::vector<std::vector<int>> &data) // IN: the output vector.
+write_to_file(const std::string &file_path,              // IN: the output path of file.
+              const std::vector<std::vector<int>> &data) // IN: the output vector.
 {
   std::ofstream fout;
   fout.open(file_path, std::fstream::out);

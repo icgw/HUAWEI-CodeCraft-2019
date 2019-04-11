@@ -11,7 +11,9 @@
 #include <string>
 #include <vector>
 
-void read_from_file(const std::string, const std::size_t, std::vector<std::vector<int>>&);
-void read_from_file(const std::string, std::vector<std::vector<int>>&);
+void read_from_file(const std::string&, const std::size_t, std::vector<std::vector<int>>&);
+void read_from_file(const std::string&, std::vector<std::vector<int>>&);
+
+void write_to_file(const std::string&, const std::vector<std::vector<int>>&);
 
 #endif // ifndef _IO_HPP_
