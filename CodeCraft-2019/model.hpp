@@ -10,8 +10,10 @@
 
 #include <iostream>
 
-#include <vector>
+#include <cstdlib>   // std::rand, std::srand
 #include <map> 
+#include <vector>
+#include <unordered_map>
 #include <functional> // std::function
 #include <utility>    // std::pair
 
@@ -48,7 +50,7 @@
 #define   PRESET_CAR_ROAD_START   2
 /*}}}*/
 
-/*{{{ RawCar, RawRoad, RawCross. (up to the input data) */
+/*{{{ RawCar, RawRoad, RawCross, RawPresetCar. (up to the input data) */
 struct RawCar {
   RawCar(int i, int f, int t, int s, int pt, int prr, int prs)
     : id(i), from(f), to(t), speed(s), plan_time(pt), priority(prr), preset(prs) {}
@@ -66,6 +68,14 @@ struct RawCross {
     : id(i), r1(up), r2(right), r3(down), r4(left) {}
   int id, r1, r2, r3, r4;
 };
+
+// FIXME: ?constructor
+struct RawPresetCar {
+  RawPresetCar(int i, int s, std::vector<int> v)
+    : id(i), start_time(s), road_path(v) {}
+  int id, start_time;
+  std::vector<int> road_path;
+};
 /*}}}*/
 
 /*{{{ struct: Feedback, StartEndInfo, NodeInfo, RoadInfo */
@@ -80,9 +90,22 @@ struct Feedback {
 };
 
 struct StartEndInfo {
-  StartEndInfo(int i, int st, int f, int t, int sp)
-    : id(i), start_time(st), from_index(f), to_index(t), speed(sp) {}
-  int id, start_time, from_index, to_index, speed;
+  StartEndInfo(int i, int st, int f, int t, int sp, int p, int b)
+    : id(i)
+    , start_time(st)
+    , from_index(f)
+    , to_index(t)
+    , speed(sp)
+    , priority(p)
+    , is_preset(b) {}
+  int id, start_time, from_index, to_index, speed, priority, is_preset;
+
+  // NOTE: after initiating and compute_hotspot.
+  int estimate_cost_time;
+  std::vector<int> cross_index_seq;
+
+  // TODO:
+  int hot = 0;
 };
 
 // FIXME: considering...
@@ -91,12 +114,14 @@ struct NodeInfo {
     : cost_time(0)
     , volumn(0)
     , in_degree(0)
-    , out_degree(0) {}
+    , out_degree(0)
+    , hotspot(0) {}
   int index, cost_time, volumn;
   int in_degree, out_degree;
+  int hotspot;
 };
 
-// FIXME: no constructor.
+// FIXME: ??
 struct RoadInfo {
   int id, len, speed, channel;
 };
@@ -112,16 +137,13 @@ public:
 
   ~Model() {}
 
-  // TODO: not finish yet.
+  // NOTE: after constructing.. map original id --> this model index.
   void initIndex();
 
-  // TODO: not in consideration yet.
-  // void update_roads_info(InfoPass &inps);
-
-  // FIXME: wait to qualify.
+  // NOTE: based on dijkstra algorithm.
   Feedback dijkstra(StartEndInfo &start_end,
                     std::function<bool (const NodeInfo&, const NodeInfo&)> cmp,
-                    std::function<int (const StartEndInfo&, const NodeInfo&)> cost);
+                    std::function<int (const StartEndInfo&, const RoadInfo&, const NodeInfo&)> cost);
 
   // XXX: require to design.  rate = start_time ^ 2 / all_car_require_time ?
   double time_rate(const int start_time, const int all_car_require_time);
@@ -135,12 +157,16 @@ public:
   // TODO: before running, probe and find some useful information and give it next.
   void probe();
 
+  // TODO:
+  void reorder_cars();
+
   // TODO: run model and store the answers.
   void run();
 
-  // XXX: It is magical,I can explain it.
+  // XXX: @deprecated
   //   -- IN: latest_time_
   void make_logistics_like(std::vector<int> &time_sequences);
+  void make_logistics_like();
 
   // NOTE: output the answers stores in `this->answers_` (type: vector<vector<int>>).
   //   -- IN: output_path_, answers_
@@ -153,18 +179,17 @@ private:
                           const std::vector<std::vector<int>> &crosses,
                           const std::vector<std::vector<int>> &preset_cars);
 
-  // TODO: transform src_id, road_path_id, tgt_id --> node index sequence.
-  // vector<int> transfrom_road_path(int src_id, vector<int> road_path, int tgt);
+  // NOTE: transform src_id, road_path_id, tgt_id --> node index sequence.
+  std::vector<int> transform_original_path_to_cross_index(const int from_id, const std::vector<int> &roads, const int to_id);
 
-  // TODO: vector<int> schedule(StartEndInfo& st, Feedback& fb);
-
-  // the number of crosses.
+  // NOTE: the number of crosses.
   int size_;
 
   // NOTE: the raw data of the model NOT input data.
-  std::vector<RawCar>   raw_cars_;
-  std::vector<RawRoad>  raw_roads_;
-  std::vector<RawCross> raw_crosses_;
+  std::vector<RawCar>       raw_cars_;
+  std::vector<RawRoad>      raw_roads_;
+  std::vector<RawCross>     raw_crosses_;
+  std::vector<RawPresetCar> raw_preset_cars_;
   /************************************************/
 
   // NOTE: extracted info. from raw data after calling `initIndex()`.
@@ -174,6 +199,8 @@ private:
   std::vector<NodeInfo>                   node_info_;
   std::vector<StartEndInfo>               cars_to_run_;
   std::map<int, std::pair<int, int>>      road_id_to_cross_index_;
+  std::unordered_map<int, int>            preset_car_id_to_index_;
+  std::map<int, std::map<int, int>>       from_road_id_to_to_id_;
   /****************************************************************/
 
   // NOTE:
@@ -182,17 +209,57 @@ private:
   //              store the in-degree and out-degree for each node.
   void record_node_degree();
 
-  // FIXME: parameter of thie model.
+  // NOTE: parameter of thie model.
   void   default_parameter();
   bool   (*priority_cmp) (const NodeInfo&, const NodeInfo&);
-  int    (*cost_func)    (const StartEndInfo&, const NodeInfo&);
+  int    (*cost_func)    (const StartEndInfo&, const RoadInfo&, const NodeInfo&);
   int    latest_time_;
-  double mid_point; // suggested: 0.3 - 0.8
-  /**********************************************************/
+  int    start_time_;
+
+  // TODO: random generator function
+  int    (*random_call)(int i);
+  long   rand_seed;
+
+  // TODO: first schedule rate recommend 0.3
+  double first_schedule_rate;
+
+  // XXX: @deprecated
+  double mid_point_;         // recommend 0.3 - 0.8
+  double lower_hotspot_cut_; // recommend < 0.3 (>0)
+  double upper_hotspot_cut_; // recommend > 0.7 (<1)
+  /*****************************************************************************/
+
+  // NOTE: compute the time cost.
+  int compute_estimate_cost(const int speed, const std::vector<int> &cross_idx);
+
+  // NOTE: compute hot spot and record estimate time for each car.
+  //   -- EFFECT: hotest_spot_cross_index_, cars_to_run_.estimate_cost_time, node_info_.hotspot.
+  void compute_hotspot();
+
+  // NOTE: compute passby cars for each cross id.
+  //   -- IN: cars_to_run_;
+  //      OUT: cross_index_to_passby_cars_.
+  void compute_passby_cars();
+
+  // TODO: must after compute_passby_cars()
+  //   -- IN: hotest_spot_cross_index_, cars_to_run_
+  //   -- compute each cars hot. sum of all cross index passby cars.
+  void compute_cars_hot();
+
+  // XXX: @deprecated
+  int lower_bound_hotspot_;
+  int upper_bound_hotspot_;
+
+  // XXX: the most frequent pass-by cross index.
+  int hotest_spot_cross_index_;
+
+  // NOTE: cross idx -> { car_index, ... }
+  std::vector<std::vector<int>> cross_index_to_passby_cars_;
 
   // NOTE: set the output path, and store answer in this class.
   std::string                             output_path_;
   std::vector<std::vector<int>>           answers_;
+  /***********************************************************/
 };
 
 inline
@@ -212,6 +279,7 @@ Model::Model(const std::string &car_path,
 
   read_from_file(preset_path, preset_cars);
 
+  // XXX: process preset_cars;
   this->transform_raw_data(cars, roads, crosses, preset_cars);
 
   this->initIndex();
@@ -225,20 +293,98 @@ Model::Model(const std::string &car_path,
 inline void
 Model::default_parameter()
 {
+  this->start_time_  = 50;
   this->latest_time_ = 3000;
-  this->mid_point    = 0.5;
+
+  // FIXME: not useful??
+  this->mid_point_   = 0.5;
+
+  // TODO:
+  this->first_schedule_rate = 0.3;
+
+  // FIXME: not use?
+  /*
+   * double lower_hotspot_cut_ = 0.3;
+   * double upper_hotspot_cut_ = 0.7 ;
+   */
 
   // `true` means first element `a` is weaker priority order than second element `b`,
   // otherwise first element `a` is more priority than second element `b`.
   this->priority_cmp = [](const NodeInfo &a, const NodeInfo &b) -> bool {
-    return a.cost_time > b.cost_time;
+    return a.cost_time > b.cost_time ||
+          (a.cost_time <= b.cost_time && a.hotspot > b.hotspot);
   };
 
   // cost function to computer src to current node. (must return > 0)
-  this->cost_func = [](const StartEndInfo &st, const NodeInfo &n) -> int {
-    return 1;
+  this->cost_func = [](const StartEndInfo &st, const RoadInfo &r, const NodeInfo &n) -> int {
+    // int len   = r.len;
+    // int limit = r.speed;
+    // int min_v = std::min(st.speed, limit);
+    // return (len + min_v - 1) / min_v;
+    return n.hotspot;
   };
 
+  // TODO:
+  std::srand(unsigned(std::time((long *)this->rand_seed)));
+  this->random_call = [](int i) -> int { return std::rand() % i; };
+
+  return;
+}
+
+inline
+std::vector<int>
+Model::transform_original_path_to_cross_index(const int from_id,
+                                              const std::vector<int> &roads,
+                                              const int to_id)
+{
+  std::vector<int> ret;
+  int from = from_id, to;
+  ret.push_back(this->cross_id_to_index_[from]);
+  for (auto rd : roads) {
+    to = this->from_road_id_to_to_id_[from][rd];
+    ret.push_back(this->cross_id_to_index_[to]);
+    from = to;
+  }
+  // FIXME: assert end_to == to_id;
+  return ret;
+}
+
+inline int
+Model::compute_estimate_cost(const int speed,
+                             const std::vector<int> &cross_idx)
+{
+  int ret = 0, len, limit, min_v;
+  int sz = cross_idx.size();
+  for (int i = 1; i < sz; ++i) {
+    RoadInfo rinfo = this->cross_index_to_road_info_[{ cross_idx[i - 1], cross_idx[i] }];
+    len   = rinfo.len;
+    limit = rinfo.speed;
+    min_v = std::min(speed, limit);
+    ret  += (int) ((len + min_v - 1) / min_v);
+  }
+  return ret;
+}
+
+inline void
+Model::compute_passby_cars()
+{
+  int sz = this->cars_to_run_.size();
+  for (auto i = 0; i < sz; ++i) {
+    for (auto &idx : this->cars_to_run_[i].cross_index_seq) {
+      this->cross_index_to_passby_cars_[idx].push_back(i);
+    }
+  }
+  return;
+}
+
+inline void
+Model::compute_cars_hot()
+{
+  for (auto &st : this->cars_to_run_) {
+    for (auto &idx : st.cross_index_seq) {
+      st.hot += this->cross_index_to_passby_cars_[idx].size();
+    }
+  }
   return;
 }
 
@@ -286,7 +432,13 @@ Model::transform_raw_data(const std::vector<std::vector<int>> &cars,
         );
   }
 
-  // XXX: how to process preset?
+  for (auto &v : preset_cars) {
+    this->raw_preset_cars_.push_back(
+        RawPresetCar(v[PRESET_CAR_ID], v[PRESET_CAR_START_TIME],
+                     std::vector<int>(v.begin() + PRESET_CAR_ROAD_START, v.end()))
+        );
+  }
+
   return;
 }
 

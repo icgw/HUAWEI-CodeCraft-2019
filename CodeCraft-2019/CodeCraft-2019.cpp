@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
   // TODO:process
   model.run();
   // TODO:write output file
+  model.output_answers();
 
   return 0;
 }
