@@ -22,7 +22,7 @@ get_vec_from_ifs(std::ifstream &fin,           // IN:  string " 1, 2, 3, ...)"
                  std::vector<int> &iv)         // OUT: vector { 1, 2, 3, ... }
 {
   char skip;
-  for (auto i = 0; i < sz; ++i) {
+  for (int i = 0; i < (int) sz; ++i) {
     fin >> iv[i] >> skip;
   }
   return;

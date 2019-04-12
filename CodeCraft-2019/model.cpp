@@ -19,7 +19,7 @@ void
 Model::initIndex()
 {
   // NOTE: call the method after model initialization.
-  auto sz = this->raw_crosses_.size();
+  int sz = this->raw_crosses_.size();
 
   this->size_ = sz;
   this->node_info_.resize(sz);
@@ -177,7 +177,7 @@ Model::dijkstra(StartEndInfo &start_end,
 void
 Model::make_logistics_like(std::vector<int> &time_sequences)
 {
-  auto sz    = time_sequences.size();
+  int sz     = time_sequences.size();
   double mid = (double) sz * this->mid_point_;
   double L   = this->latest_time_;
   double k   = std::pow(L / time_sequences[0] + 1.0, 1.0 / mid);
@@ -195,7 +195,7 @@ Model::make_logistics_like(std::vector<int> &time_sequences)
 void
 Model::make_logistics_like()
 {
-  auto sz = this->cars_to_run_.size();
+  int sz = this->cars_to_run_.size();
   double mid = (double) sz * this->mid_point_;
   double L = this->latest_time_;
   double k = std::pow(L / this->cars_to_run_[0].start_time + 1.0, 1.0 / mid);
@@ -230,6 +230,9 @@ Model::run()
     if (st.is_preset != 0) {
       // TODO: ?
       // std::cout << this->compute_estimate_cost(st.speed, st.cross_index_seq) << std::endl;
+      for (auto idx : st.cross_index_seq) {
+        ++(this->node_info_[idx].volumn);
+      }
       continue;
     }
     // std::vector<int> tmp;
@@ -237,9 +240,9 @@ Model::run()
     // tmp.push_back(st.start_time);
     Feedback fb = this->dijkstra(st, this->priority_cmp, this->cost_func);
     st.cross_index_seq.assign(fb.t_path.begin(), fb.t_path.end());
-    // std::vector<int> p = this->transform_path(fb.t_path);
-    // tmp.insert(tmp.end(), p.begin(), p.end());
-    // this->answers_.push_back(tmp);
+    for (auto idx : fb.t_path) {
+      ++(this->node_info_[idx].volumn);
+    }
   }
 
   this->compute_passby_cars();
@@ -248,16 +251,14 @@ Model::run()
   // TODO: two compute start time.
   std::sort(this->cars_to_run_.begin(), this->cars_to_run_.end(),
       [](const StartEndInfo &a, const StartEndInfo &b) -> bool {
-        return (a.is_preset < b.is_preset) ||
-               (a.is_preset == b.is_preset && a.hot > b.hot) ||
-               (a.hot == b.hot && a.priority > b.priority);
+        return a.hot > b.hot;
       });
 
   int total = this->cars_to_run_.size();
   //  -- step 1: for part
   double start_t = (double) this->start_time_;
-  int part  = (int) total * this->first_schedule_rate;
-  double step1 = (double) this->latest_time_ / (double) part;
+  int part  = (int) total * this->first_schedule_rate_;
+  double step1 = (double) this->latest_time_ * this->first_schedule_time_rate_ / (double) part; // key.
   for (int i = 0; i < part; ++i) {
     this->cars_to_run_[i].start_time = std::max(this->cars_to_run_[i].start_time, (int)start_t);
     start_t += step1;
@@ -266,6 +267,11 @@ Model::run()
   std::random_shuffle(this->cars_to_run_.begin(), this->cars_to_run_.end(),
                       this->random_call);
   start_t = 0;
+  std::sort(this->cars_to_run_.begin(), this->cars_to_run_.end(),
+      [](const StartEndInfo &a, const StartEndInfo &b) -> bool {
+        return a.priority > b.priority ||
+               (a.priority == b.priority && a.estimate_cost_time < b.estimate_cost_time);
+      });
   double step2 = (double) this->latest_time_ / (double) total;
   for (int i = 0; i < total; ++i) {
     if (this->cars_to_run_[i].is_preset != 1) {
@@ -292,11 +298,6 @@ Model::run()
         return a[1] < b[1];
       });
 
-  /*
-   * for (auto st : this->cars_to_run_) {
-   *   Feedback fb = this->dijkstra(st, this->priority_cmp, this->cost_func);
-   * }
-   */
   return;
 }
 
@@ -341,15 +342,6 @@ Model::compute_hotspot()
   }
 
   this->hotest_spot_cross_index_ = spot_index;
-
-  /** @deprecated
-   * std::sort(tmp.begin(), tmp.end());
-   * int l, r;
-   * l = (int) this->size_ * this->lower_hotspot_cut_;
-   * r = (int) this->size_ * this->upper_hotspot_cut_;
-   * this->lower_bound_hotspot_ = tmp[l];
-   * this->upper_bound_hotspot_ = tmp[r];
-   */
 
   return;
 }

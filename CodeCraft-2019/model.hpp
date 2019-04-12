@@ -10,14 +10,14 @@
 
 #include <iostream>
 
-#include <cstdlib>   // std::rand, std::srand
-#include <ctime>     // std::time
-
 #include <map> 
 #include <vector>
 #include <unordered_map>
 #include <functional> // std::function
 #include <utility>    // std::pair
+
+#include <ctime>      // std::time
+#include <cstdlib>    // std::rand, std::srand
 
 #include "io.hpp"
 
@@ -222,12 +222,12 @@ private:
   int    (*random_call)(int i);
 
   // TODO: first schedule rate recommend 0.3
-  double first_schedule_rate;
+  double first_schedule_rate_;
+  double first_schedule_time_rate_;
 
   // XXX: @deprecated
-  double mid_point_;         // recommend 0.3 - 0.8
-  double lower_hotspot_cut_; // recommend < 0.3 (>0)
-  double upper_hotspot_cut_; // recommend > 0.7 (<1)
+  double lower_hotspot_cut_;       // recommend < 0.3 (>0)
+  double upper_hotspot_cut_;       // recommend > 0.7 (<1)
   /*****************************************************************************/
 
   // NOTE: compute the time cost.
@@ -294,14 +294,10 @@ Model::Model(const std::string &car_path,
 inline void
 Model::default_parameter()
 {
-  this->start_time_  = 50;
-  this->latest_time_ = 3000;
-
-  // FIXME: not useful??
-  this->mid_point_   = 0.5;
-
-  // TODO:
-  this->first_schedule_rate = 0.3;
+  this->start_time_               = 600;
+  this->latest_time_              = 2600;
+  this->first_schedule_rate_      = 0.3;
+  this->first_schedule_time_rate_ = 0.5;
 
   // FIXME: not use?
   /*
@@ -322,7 +318,8 @@ Model::default_parameter()
     // int limit = r.speed;
     // int min_v = std::min(st.speed, limit);
     // return (len + min_v - 1) / min_v;
-    return n.hotspot;
+    // return (int) (n.hotspot * (rand() / (double) RAND_MAX));
+    return n.hotspot + n.volumn;
   };
 
   // TODO:
@@ -455,7 +452,7 @@ Model::increase_volumn(std::vector<int> &nodes)
 inline std::vector<int>
 Model::transform_path(std::vector<int> &nodes) {
   std::vector<int> road_path;
-  auto sz = nodes.size();
+  int sz = nodes.size();
   for (auto i = 1; i < sz; ++i) {
     road_path.push_back(this->cross_index_to_road_info_[{ nodes[i - 1], nodes[i] }].id);
   }

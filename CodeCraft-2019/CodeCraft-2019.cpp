@@ -3,14 +3,11 @@
 
 #include "model.hpp"
 
-static const auto _ = []() -> bool {
-  std::ios::sync_with_stdio(false);
-  std::cin.tie(nullptr);
-  return true;
-}();
-
 int main(int argc, char *argv[])
 {
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
+
   std::cout << "Begin" << std::endl;
 
   if(argc < 6){
