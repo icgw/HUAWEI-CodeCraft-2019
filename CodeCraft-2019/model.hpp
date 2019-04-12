@@ -11,6 +11,8 @@
 #include <iostream>
 
 #include <cstdlib>   // std::rand, std::srand
+#include <ctime>     // std::time
+
 #include <map> 
 #include <vector>
 #include <unordered_map>
@@ -218,7 +220,6 @@ private:
 
   // TODO: random generator function
   int    (*random_call)(int i);
-  long   rand_seed;
 
   // TODO: first schedule rate recommend 0.3
   double first_schedule_rate;
@@ -325,7 +326,7 @@ Model::default_parameter()
   };
 
   // TODO:
-  std::srand(unsigned(std::time((long *)this->rand_seed)));
+  std::srand(std::time(0));
   this->random_call = [](int i) -> int { return std::rand() % i; };
 
   return;
