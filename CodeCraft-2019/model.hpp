@@ -226,6 +226,7 @@ private:
   double first_schedule_time_rate_;
 
   // XXX: @deprecated
+  double mid_point_;
   double lower_hotspot_cut_;       // recommend < 0.3 (>0)
   double upper_hotspot_cut_;       // recommend > 0.7 (<1)
   /*****************************************************************************/
@@ -248,11 +249,11 @@ private:
   void compute_cars_hot();
 
   // XXX: @deprecated
-  int lower_bound_hotspot_;
-  int upper_bound_hotspot_;
+  // int lower_bound_hotspot_;
+  // int upper_bound_hotspot_;
 
   // XXX: the most frequent pass-by cross index.
-  int hotest_spot_cross_index_;
+  // int hotest_spot_cross_index_;
 
   // NOTE: cross idx -> { car_index, ... }
   std::vector<std::vector<int>> cross_index_to_passby_cars_;
@@ -300,6 +301,8 @@ Model::default_parameter()
   this->first_schedule_time_rate_ = 0.5;
 
   // FIXME: not use?
+  this->mid_point_ = 0.3;
+
   /*
    * double lower_hotspot_cut_ = 0.3;
    * double upper_hotspot_cut_ = 0.7 ;
@@ -322,7 +325,7 @@ Model::default_parameter()
     return n.hotspot + n.volumn;
   };
 
-  // TODO:
+  // XXX: set time seed?
   std::srand(std::time(0));
   this->random_call = [](int i) -> int { return std::rand() % i; };
 
@@ -363,6 +366,7 @@ Model::compute_estimate_cost(const int speed,
   return ret;
 }
 
+// XXX: emm...
 inline void
 Model::compute_passby_cars()
 {
@@ -375,17 +379,20 @@ Model::compute_passby_cars()
   return;
 }
 
+// XXX: emmm...
 inline void
 Model::compute_cars_hot()
 {
   for (auto &st : this->cars_to_run_) {
     for (auto &idx : st.cross_index_seq) {
-      st.hot += this->cross_index_to_passby_cars_[idx].size();
+      // st.hot += this->cross_index_to_passby_cars_[idx].size();
+      st.hot += this->node_info_[idx].volumn;
     }
   }
   return;
 }
 
+// FIXME: not useful?
 inline void
 Model::record_node_degree()
 {
@@ -440,6 +447,7 @@ Model::transform_raw_data(const std::vector<std::vector<int>> &cars,
   return;
 }
 
+// FIXME: not useful?
 inline void
 Model::increase_volumn(std::vector<int> &nodes)
 {

@@ -4,7 +4,6 @@
  *
  * Distributed under terms of the GPL license.
  */
-// #include <iostream>
 
 #include <limits>    // std::numeric_limits<double>::infinity()
 #include <algorithm> // std::reverse
@@ -29,7 +28,7 @@ Model::initIndex()
   // NOTE: create cross_id_to_index.
   for (auto i = 0; i < sz; ++i) {
     this->cross_id_to_index_[this->raw_crosses_[i].id] = i;
-    this->node_info_[i].index  = i;
+    this->node_info_[i].index                          = i;
   }
 
   // NOTE: create cross_index_to_road_info_,
@@ -58,6 +57,7 @@ Model::initIndex()
       this->cross_index_to_road_info_[{ to_idx, from_idx }].len     = this->raw_roads_[i].len;
       this->cross_index_to_road_info_[{ to_idx, from_idx }].speed   = this->raw_roads_[i].speed;
       this->cross_index_to_road_info_[{ to_idx, from_idx }].channel = this->raw_roads_[i].channel;
+
       this->adjacency_[to_idx].push_back(from_idx);
       this->from_road_id_to_to_id_[to][this->raw_roads_[i].id] = from;
     }
@@ -69,7 +69,7 @@ Model::initIndex()
     this->preset_car_id_to_index_[this->raw_preset_cars_[i].id] = i;
   }
 
-  // FIXME: not process preset car.
+  // NOTE: save preset car's path.
   sz = this->raw_cars_.size();
   for (auto i = 0; i < sz; ++i) {
     from_idx = this->cross_id_to_index_[this->raw_cars_[i].from];
@@ -82,6 +82,7 @@ Model::initIndex()
                            this->raw_cars_[i].speed,
                            this->raw_cars_[i].priority,
                            this->raw_cars_[i].preset);
+
     if (this->raw_cars_[i].preset != 0) {
       int idx = this->preset_car_id_to_index_[this->raw_cars_[i].id];
       std::vector<int> cross_seq = this->transform_original_path_to_cross_index(
@@ -158,16 +159,6 @@ Model::dijkstra(StartEndInfo &start_end,
   reverse(fb.t_path.begin(), fb.t_path.end());
   fb.cost_time = this->node_info_[start_end.to_index].cost_time - start_end.start_time;
 
-  // std::cout << fb.cost_time << std::endl;
-
-  /*
-   * std::vector<int> xpath = this->transform_path(fb.t_path);
-   * for (auto x : xpath) {
-   *   std::cout << x << ", ";
-   * }
-   * std::cout << std::endl;
-   */
-
   return fb;
 }
 /*}}}*/
@@ -223,21 +214,15 @@ Model::run()
 {
   this->probe();
 
-  // XXX: @deprecated!this->make_logistics_like();
-  // double time_rate = (double) this->latest_time_ / (double) this->cars_to_run_.size();
-
   for (auto &st : this->cars_to_run_) {
     if (st.is_preset != 0) {
       // TODO: ?
-      // std::cout << this->compute_estimate_cost(st.speed, st.cross_index_seq) << std::endl;
       for (auto idx : st.cross_index_seq) {
         ++(this->node_info_[idx].volumn);
       }
       continue;
     }
-    // std::vector<int> tmp;
-    // tmp.push_back(st.id);
-    // tmp.push_back(st.start_time);
+
     Feedback fb = this->dijkstra(st, this->priority_cmp, this->cost_func);
     st.cross_index_seq.assign(fb.t_path.begin(), fb.t_path.end());
     for (auto idx : fb.t_path) {
@@ -248,25 +233,26 @@ Model::run()
   this->compute_passby_cars();
   this->compute_cars_hot();
 
-  // TODO: two compute start time.
+  // TODO: compute start time twice.
   std::sort(this->cars_to_run_.begin(), this->cars_to_run_.end(),
       [](const StartEndInfo &a, const StartEndInfo &b) -> bool {
         return a.hot > b.hot;
       });
 
   int total = this->cars_to_run_.size();
-  //  -- step 1: for part
+  //  -- step 1: for part hot car.
   double start_t = (double) this->start_time_;
-  int part  = (int) total * this->first_schedule_rate_;
-  double step1 = (double) this->latest_time_ * this->first_schedule_time_rate_ / (double) part; // key.
+  int part       = (int) total * this->first_schedule_rate_;
+  double step1   = (double) this->latest_time_ * this->first_schedule_time_rate_ / (double) part; // key.
   for (int i = 0; i < part; ++i) {
     this->cars_to_run_[i].start_time = std::max(this->cars_to_run_[i].start_time, (int)start_t);
     start_t += step1;
   }
-  //  -- step 2: for all
+  //  -- step 2: for remain car contail cold car.
   std::random_shuffle(this->cars_to_run_.begin(), this->cars_to_run_.end(),
                       this->random_call);
-  start_t = 0;
+  // NOTICE?
+  start_t = 1;
   std::sort(this->cars_to_run_.begin(), this->cars_to_run_.end(),
       [](const StartEndInfo &a, const StartEndInfo &b) -> bool {
         return a.priority > b.priority ||
@@ -293,10 +279,10 @@ Model::run()
     this->answers_.push_back(tmp);
   }
 
-  std::sort(this->answers_.begin(), this->answers_.end(),
-      [](const std::vector<int>& a, const std::vector<int>& b) {
-        return a[1] < b[1];
-      });
+  // std::sort(this->answers_.begin(), this->answers_.end(),
+  //     [](const std::vector<int>& a, const std::vector<int>& b) {
+  //       return a[1] < b[1];
+  //     });
 
   return;
 }
@@ -316,37 +302,37 @@ Model::compute_hotspot()
     return (len + min_v - 1) / min_v;
   };
 
-  int max_spot = 0, spot_index = 0;
+  // int max_spot = 0, spot_index = 0;
   for (auto &st : this->cars_to_run_) {
     if (st.is_preset != 0) {
       // NOTE: for preset car or non-preset car, compute hotspot separately.
       st.estimate_cost_time = this->compute_estimate_cost(st.speed, st.cross_index_seq);
       for (auto idx : st.cross_index_seq) {
         ++(this->node_info_[idx].hotspot);
-        if (this->node_info_[idx].hotspot > max_spot) {
-          max_spot = this->node_info_[idx].hotspot;
-          spot_index = idx;
-        }
+        // if (this->node_info_[idx].hotspot > max_spot) {
+        //   max_spot = this->node_info_[idx].hotspot;
+        //   spot_index = idx;
+        // }
       }
     } else {
       Feedback fb = this->dijkstra(st, cmp, cost_func);
       st.estimate_cost_time = fb.cost_time;
       for (auto idx : fb.t_path) {
         ++(this->node_info_[idx].hotspot);
-        if (this->node_info_[idx].hotspot > max_spot) {
-          max_spot = this->node_info_[idx].hotspot;
-          spot_index = idx;
-        }
+        // if (this->node_info_[idx].hotspot > max_spot) {
+        //   max_spot = this->node_info_[idx].hotspot;
+        //   spot_index = idx;
+        // }
       }
     }
   }
 
-  this->hotest_spot_cross_index_ = spot_index;
+  // this->hotest_spot_cross_index_ = spot_index;
 
   return;
 }
 
-// FIXME:
+// FIXME: not useful?
 void
 Model::reorder_cars()
 {
