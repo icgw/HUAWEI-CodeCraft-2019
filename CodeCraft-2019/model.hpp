@@ -16,8 +16,8 @@
 #include <functional> // std::function
 #include <utility>    // std::pair
 
-#include <ctime>      // std::time
-#include <cstdlib>    // std::rand, std::srand
+// #include <ctime>      // std::time
+// #include <cstdlib>    // std::rand, std::srand
 
 #include "io.hpp"
 
@@ -218,8 +218,8 @@ private:
   int    latest_time_;
   int    start_time_;
 
-  // TODO: random generator function
-  int    (*random_call)(int i);
+  // XXX: @deprecated.
+  // int    (*random_call)(int i);
 
   // TODO: first schedule rate recommend 0.3
   double first_schedule_rate_;
@@ -317,17 +317,17 @@ Model::default_parameter()
 
   // cost function to computer src to current node. (must return > 0)
   this->cost_func = [](const StartEndInfo &st, const RoadInfo &r, const NodeInfo &n) -> int {
-    // int len   = r.len;
-    // int limit = r.speed;
-    // int min_v = std::min(st.speed, limit);
-    // return (len + min_v - 1) / min_v;
+    int len   = r.len;
+    int limit = r.speed;
+    int min_v = std::min(st.speed, limit);
+    return (len + min_v - 1) / min_v;
     // return (int) (n.hotspot * (rand() / (double) RAND_MAX));
-    return n.hotspot + n.volumn;
+    // return n.hotspot + n.volumn;
   };
 
   // XXX: set time seed?
-  std::srand(std::time(0));
-  this->random_call = [](int i) -> int { return std::rand() % i; };
+  // std::srand(std::time(0));
+  // this->random_call = [](int i) -> int { return std::rand() % i; };
 
   return;
 }

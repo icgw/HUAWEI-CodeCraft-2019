@@ -5,8 +5,6 @@
  * Distributed under terms of the GPL license.
  */
 
-// #include <iostream>
-
 #include <fstream>   // std::ifstream
 #include <sstream>   // std::ostringstream
 #include <limits>    // std::numeric_limits
@@ -46,8 +44,8 @@ void get_vec_from_ifs(std::ifstream &fin,
 // read file from path and convert each line to vector.
 void
 read_from_file(const std::string &file_path,       // IN:  the path name of file
-               const std::size_t column,          // IN:  the number of variable for each line
-               std::vector<std::vector<int>> &iv) // OUT: the vector of integer vector
+               const std::size_t column,           // IN:  the number of variable for each line
+               std::vector<std::vector<int>> &iv)  // OUT: the vector of integer vector
 {
   std::ifstream fin;
   fin.open(file_path, std::fstream::in);
@@ -88,10 +86,10 @@ read_from_file(const std::string &file_path,
   return;
 }
 
-/*{{{ convert string to integer vector.*/
+/*{{{ convert integer vector into string.*/
 void
 get_str_from_ivec(const std::vector<int> &iv, // IN:  vector { 1, 2, 3, ... }
-                 std::string &s)              // OUT: string "(1, 2, 3, ...)"
+                  std::string &s)             // OUT: string "(1, 2, 3, ...)"
 {
   std::ostringstream oss;
   oss << "(";
@@ -122,22 +120,3 @@ write_to_file(const std::string &file_path,              // IN: the output path 
   }
   return;
 }
-
-/*{{{ main testing entry. */
-/*
- * int main()
- * {
- *   std::string fp = "../config/car.txt";
- *   std::vector<std::vector<int>> v;
- *   read_from_file(fp, 7, v);
- *   for (auto k = 0; k <= 20; ++k) {
- *     for (auto i = 0; i < 7; ++i) {
- *       if (i != 0) std::cout << ", ";
- *       std::cout << v[k][i];
- *     }
- *     std::cout << "\n";
- *   }
- *   return 0;
- * }
- */
-/*}}}*/

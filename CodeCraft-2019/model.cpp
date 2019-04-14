@@ -204,8 +204,8 @@ Model::probe()
 {
   this->compute_hotspot();
 
-  std::random_shuffle(this->cars_to_run_.begin(), this->cars_to_run_.end(),
-                      this->random_call);
+  // std::random_shuffle(this->cars_to_run_.begin(), this->cars_to_run_.end(),
+  //                     this->random_call);
   return;
 }
 
@@ -240,6 +240,7 @@ Model::run()
       });
 
   int total = this->cars_to_run_.size();
+
   //  -- step 1: for part hot car.
   double start_t = (double) this->start_time_;
   int part       = (int) total * this->first_schedule_rate_;
@@ -248,9 +249,10 @@ Model::run()
     this->cars_to_run_[i].start_time = std::max(this->cars_to_run_[i].start_time, (int)start_t);
     start_t += step1;
   }
+
   //  -- step 2: for remain car contail cold car.
-  std::random_shuffle(this->cars_to_run_.begin(), this->cars_to_run_.end(),
-                      this->random_call);
+  // std::random_shuffle(this->cars_to_run_.begin(), this->cars_to_run_.end(),
+  //                     this->random_call);
   // NOTICE?
   start_t = 1;
   std::sort(this->cars_to_run_.begin(), this->cars_to_run_.end(),
@@ -279,11 +281,6 @@ Model::run()
     this->answers_.push_back(tmp);
   }
 
-  // std::sort(this->answers_.begin(), this->answers_.end(),
-  //     [](const std::vector<int>& a, const std::vector<int>& b) {
-  //       return a[1] < b[1];
-  //     });
-
   return;
 }
 
@@ -302,32 +299,21 @@ Model::compute_hotspot()
     return (len + min_v - 1) / min_v;
   };
 
-  // int max_spot = 0, spot_index = 0;
   for (auto &st : this->cars_to_run_) {
     if (st.is_preset != 0) {
       // NOTE: for preset car or non-preset car, compute hotspot separately.
       st.estimate_cost_time = this->compute_estimate_cost(st.speed, st.cross_index_seq);
       for (auto idx : st.cross_index_seq) {
         ++(this->node_info_[idx].hotspot);
-        // if (this->node_info_[idx].hotspot > max_spot) {
-        //   max_spot = this->node_info_[idx].hotspot;
-        //   spot_index = idx;
-        // }
       }
     } else {
       Feedback fb = this->dijkstra(st, cmp, cost_func);
       st.estimate_cost_time = fb.cost_time;
       for (auto idx : fb.t_path) {
         ++(this->node_info_[idx].hotspot);
-        // if (this->node_info_[idx].hotspot > max_spot) {
-        //   max_spot = this->node_info_[idx].hotspot;
-        //   spot_index = idx;
-        // }
       }
     }
   }
-
-  // this->hotest_spot_cross_index_ = spot_index;
 
   return;
 }
