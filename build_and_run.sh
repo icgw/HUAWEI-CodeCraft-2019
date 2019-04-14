@@ -6,4 +6,4 @@ cd ../CodeCraft-2019/judge/
 make
 make clean
 @echo Testing schdule judge...
-./main ../../training-answer/car.txt ../../training-answer/road.txt ../../training-answer/cross.txt ../../training-answer/presetAnswer.txt ../../training-answer/answer.txt
+./judge.out ../../training-answer/car.txt ../../training-answer/road.txt ../../training-answer/cross.txt ../../training-answer/presetAnswer.txt ../../training-answer/answer.txt

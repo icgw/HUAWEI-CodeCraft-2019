@@ -3,7 +3,7 @@
 #   04/08/2018
 ################################
 
-JUDGE    = main
+JUDGE    = judge.out
 CXXFLAGS = -std=c++11 -O3
 PROGRAM  = $(JUDGE)
 CXX      = g++
