@@ -3,7 +3,7 @@
 
 ![GitHub](https://img.shields.io/github/license/icgw/HUAWEI-CodeCraft-2019)
 
-> 虽然结果不佳，但并不遗憾。
+> 虽然结果不如意，但很有收获。
 
 - 赛区：京津东北
 - 初赛：17名
